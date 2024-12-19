@@ -1,0 +1,32 @@
+* {
+	padding: 0;
+	margin: 0;
+	box-sizing: border-box;
+}
+
+#root {
+	display: flex;
+	justify-content: center;
+}
+
+.App {
+	width: 800px;
+}
+
+.post {
+	display: flex;
+	border: 2px solid teal;
+	justify-content: space-between;
+	margin: 20px;
+}
+
+.post__btns {
+	display: flex;
+	align-items: center;
+	padding-right: 20px;
+}
+
+.post__content {
+	margin: 10px;
+	padding-left: 20px;
+}
