@@ -1,0 +1,5 @@
+{
+	"extends": ["../../tslint.json", "tslint-react"],
+	"linterOptions": { "exclude": ["config/**/*.js", "node_modules/**/*.ts"] },
+	"react/react-in-jsx-scope": 0
+}
