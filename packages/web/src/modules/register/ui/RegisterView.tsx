@@ -1,42 +1,36 @@
 import React from 'react'
 import { LockOutlined, UserOutlined } from '@ant-design/icons'
 import { Button, Checkbox, Form, Input, Flex } from 'antd'
-import { FormikErrors, FormikProps, withFormik } from 'formik'
+import { FormikErrors, FormikProps, withFormik, Field } from 'formik'
+import { validUserSchema } from '@cf/common'
+import { InputField } from '../../shared/InputField'
 
 interface FormValues {
 	email: string
-	username: string
 	password: string
 }
 interface Props {
-	submit: (values: FormValues) => Promise<FormikErrors<FormValues>>
+	submit: (values: FormValues) => Promise<FormikErrors<FormValues> | null>
 }
-const C: React.FC<FormikProps<FormValues> & Props> = () => {
+const RegisterForm: React.FC<FormikProps<FormValues> & Props> = ({
+	handleSubmit,
+}) => {
 	return (
-		<div style={{ alignItems: 'center' }}>
+		<form style={{ alignItems: 'center' }} onSubmit={handleSubmit}>
 			<div style={{ maxWidth: 400, margin: 'auto' }}>
-				<Form.Item
-					name='username'
-					rules={[{ required: true, message: 'Please input your Username!' }]}
-				>
-					<Input prefix={<UserOutlined />} placeholder='Username' />
-				</Form.Item>
-				<Form.Item
+				<Field
 					name='email'
-					rules={[{ required: true, message: 'Please input your Email!' }]}
-				>
-					<Input prefix={<UserOutlined />} placeholder='Username' />
-				</Form.Item>
-				<Form.Item
+					prefix={<UserOutlined />}
+					placeholder='Email'
+					component={InputField}
+				/>
+				<Field
 					name='password'
-					rules={[{ required: true, message: 'Please input your Password!' }]}
-				>
-					<Input
-						prefix={<LockOutlined />}
-						type='password'
-						placeholder='Password'
-					/>
-				</Form.Item>
+					type='password'
+					prefix={<LockOutlined />}
+					placeholder='Password'
+					component={InputField}
+				/>
 				<Form.Item>
 					<Flex justify='space-between' align='center'>
 						<Form.Item name='remember' valuePropName='checked' noStyle>
@@ -45,7 +39,6 @@ const C: React.FC<FormikProps<FormValues> & Props> = () => {
 						<a href=''>Forgot password</a>
 					</Flex>
 				</Form.Item>
-
 				<Form.Item>
 					<Button block type='primary' htmlType='submit'>
 						Register
@@ -53,13 +46,17 @@ const C: React.FC<FormikProps<FormValues> & Props> = () => {
 					or <a href=''>Login now!</a>
 				</Form.Item>
 			</div>
-		</div>
+		</form>
 	)
 }
 
 export const RegisterView = withFormik<Props, FormValues>({
-	mapPropsToValues: () => ({ email: '', username: '', password: '' }),
-	handleSubmit: async (values, { props, setErrors, setSubmitting }) => {
+	validationSchema: validUserSchema,
+	mapPropsToValues: () => ({ email: '', password: '' }),
+	handleSubmit: async (values, { props, setErrors }) => {
 		const errors = await props.submit(values)
+		if (errors) {
+			setErrors(errors)
+		}
 	},
-})(C)
+})(RegisterForm)

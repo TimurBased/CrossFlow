@@ -1,5 +1,4 @@
-import * as React from 'react'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { RegisterConnector } from '../modules/register/RegistorConnector'
 
 export const AppRoutes = () => {
