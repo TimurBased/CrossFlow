@@ -1,0 +1,15 @@
+.git
+.vscode
+.gitignore
+Makefile
+README.md
+node_modules
+logs
+.DS_Store
+*.log
+*.temp
+*.tmp
+*.swp
+.idea
+.vscode
+.env.local

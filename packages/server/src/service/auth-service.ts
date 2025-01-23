@@ -1,25 +1,27 @@
 import bcrypt from 'bcrypt'
 import tokenService from '../service/token-service'
 import UserDto from '../dto/user-dto'
-import { dataSource } from '../data-source/data-source'
+import { AppDataSource } from '../utils/createTypeormConn'
 import { User } from '../entity/User'
 
 class AuthService {
-	private userRepository = dataSource.getRepository(User)
+	private userRepository = AppDataSource.getRepository(User)
 
-	async registration(username: string, password: string, email: string) {
+	async registration(email: string, password: string) {
+		console.log('вошли в сервис авторизации')
 		const candidate = await this.userRepository.findOne({
-			where: { username: username },
+			where: { email: email },
 		})
 
 		if (candidate) {
 			throw new Error('A user with this name already exists')
 		}
+
 		const newUser = this.userRepository.create({
-			username,
-			password,
 			email,
+			password,
 		})
+
 		await this.userRepository.save(newUser)
 		const userDto = new UserDto(newUser.id, newUser.email, newUser.role)
 		const tokens = tokenService.generateTokens({ ...userDto })

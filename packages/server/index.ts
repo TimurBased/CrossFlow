@@ -1,32 +1,42 @@
-import express, { Express } from 'express'
+import express from 'express'
 import cookieParser from 'cookie-parser'
-import UserRouter from './src/routes/user-routes'
-import PostRouter from './src/routes/post-routes'
-import AuthRouter from './src/routes/auth-routes'
+import userRoutes from './src/routes/user-routes'
+import postRoutes from './src/routes/post-routes'
+import authRoutes from './src/routes/auth-routes'
 import dotenv from 'dotenv'
-import { dataSource } from './src/data-source/data-source'
-// import swaggerUi from 'swagger-ui-express'
-// import swaggerDocument from './swagger/swagger_output.json' assert { type: 'json' }
+import { createTypeormConn } from './src/utils/createTypeormConn'
+import cors from 'cors'
 
 dotenv.config()
 
-const PORT = process.env.PORT || 5000
+const PORT = process.env.PORT
 const app = express()
+
+app.use(
+	cors({
+		origin: process.env.FRONTEND_URL,
+		credentials: true,
+		methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+		allowedHeaders: ['Content-Type', 'Authorization'],
+	})
+)
 
 app.use(express.json())
 app.use(cookieParser())
 
-// app.use('/swagger', swaggerUi.serve, swaggerUi.setup(swaggerDocument))
+app.use('/api', userRoutes)
+app.use('/api', postRoutes)
+app.use('/auth', authRoutes)
 
-app.use('/api', UserRouter)
-app.use('/api', PostRouter)
-app.use('/auth', AuthRouter)
-dataSource
-	.initialize()
-	.then(() => {
-		console.log('DataSource has been initialized!')
-		app.listen(PORT, () => console.log(`Application started on ${PORT}...`))
-	})
-	.catch(err => {
-		console.error('Error during DataSource initialization:', err)
-	})
+const startServer = async () => {
+	try {
+		await createTypeormConn()
+		app.listen(PORT, () => {
+			console.log(`Application started on port ${PORT}...`)
+		})
+	} catch (error) {
+		console.error('Failed to start server:', error)
+	}
+}
+
+startServer()

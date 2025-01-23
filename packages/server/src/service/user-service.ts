@@ -1,8 +1,8 @@
-import { dataSource } from '../data-source/data-source'
+import { AppDataSource } from '../utils/createTypeormConn'
 import { User } from '../entity/User'
 
 class UserService {
-	private userRepository = dataSource.getRepository(User)
+	private userRepository = AppDataSource.getRepository(User)
 
 	async createUser(
 		id: string,

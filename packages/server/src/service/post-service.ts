@@ -1,8 +1,8 @@
-import { dataSource } from '../data-source/data-source'
+import { AppDataSource } from '../utils/createTypeormConn'
 import { Post } from '../entity/Post'
 
 class PostService {
-	private postRepository = dataSource.getRepository(Post)
+	private postRepository = AppDataSource.getRepository(Post)
 
 	async createPost(title: string, description: string, user_id: string) {
 		const newPost = this.postRepository.create({

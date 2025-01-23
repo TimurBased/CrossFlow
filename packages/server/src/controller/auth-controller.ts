@@ -1,20 +1,13 @@
-import { validationResult } from 'express-validator'
 import authService from '../service/auth-service'
 import { Request, Response } from 'express'
-
+// import { validUserSchema } from '@cf/common'
 class AuthController {
 	async registration(req: Request, res: Response): Promise<any> {
 		try {
-			const errors = validationResult(req)
-			if (!errors.isEmpty()) {
-				return res
-					.status(400)
-					.json({ message: 'Error on registration', errors })
-			}
+			// await validUserSchema.validate(req.body)
 
-			const { username, password, email } = req.body
-			const userData = await authService.registration(username, password, email)
-
+			const { email, password } = req.body
+			const userData = await authService.registration(email, password)
 			res.cookie('refreshToken', userData.tokens.refreshToken, {
 				maxAge: 30 * 24 * 60 * 60 * 1000,
 				httpOnly: true,
@@ -22,7 +15,7 @@ class AuthController {
 			return res.json(userData)
 		} catch (e) {
 			console.log(e)
-			return res.status(400).json({ message: 'Registration error' })
+			return res.status(400).json({ message: 'Registration error', e })
 		}
 	}
 

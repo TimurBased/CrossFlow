@@ -1,9 +1,9 @@
 import jwt from 'jsonwebtoken'
 import UserDto from '../dto/user-dto'
-import { dataSource } from '../data-source/data-source'
 import { Token } from '../entity/Token'
+import { AppDataSource } from '../utils/createTypeormConn'
 class TokenService {
-	private tokenRepository = dataSource.getRepository(Token)
+	private tokenRepository = AppDataSource.getRepository(Token)
 	generateTokens(payload: UserDto) {
 		const accessToken = jwt.sign(
 			payload,

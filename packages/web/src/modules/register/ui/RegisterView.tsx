@@ -1,6 +1,6 @@
 import React from 'react'
 import { LockOutlined, UserOutlined } from '@ant-design/icons'
-import { Button, Checkbox, Form, Input, Flex } from 'antd'
+import { Button, Checkbox, Form, Flex } from 'antd'
 import { FormikErrors, FormikProps, withFormik, Field } from 'formik'
 import { validUserSchema } from '@cf/common'
 import { InputField } from '../../shared/InputField'
@@ -11,12 +11,16 @@ interface FormValues {
 }
 interface Props {
 	submit: (values: FormValues) => Promise<FormikErrors<FormValues> | null>
+	isLoading: boolean
+	error: string | null
 }
 const RegisterForm: React.FC<FormikProps<FormValues> & Props> = ({
 	handleSubmit,
+	isLoading,
+	error,
 }) => {
 	return (
-		<form style={{ alignItems: 'center' }} onSubmit={handleSubmit}>
+		<Form style={{ display: 'flex' }} onFinish={handleSubmit}>
 			<div style={{ maxWidth: 400, margin: 'auto' }}>
 				<Field
 					name='email'
@@ -46,7 +50,7 @@ const RegisterForm: React.FC<FormikProps<FormValues> & Props> = ({
 					or <a href=''>Login now!</a>
 				</Form.Item>
 			</div>
-		</form>
+		</Form>
 	)
 }
 
