@@ -1,26 +1,23 @@
 FROM node
 
-WORKDIR /app/server
+WORKDIR /crossflow
 
-RUN npm install -g yarn --force
+COPY ./package.json .
+COPY ./packages/server/package.json ./packages/server/
+COPY ./packages/common/package.json ./packages/common/
 
-# Копируем только нужные файлы
-# COPY ./yarn.lock /app/
-# COPY ./package.json /app/
-COPY ./package.json /app/server/
-COPY ./.env /app/server/
-COPY ./ /app/server/
+RUN npm i -g yarn --force
+RUN yarn install --production 
 
-WORKDIR /app/server
 
-RUN yarn install --production
-RUN yarn config set registry https://registry.npmjs.org
+COPY ./packages/server/dist ./packages/server/dist
+COPY ./packages/common/dist ./packages/common/dist
+COPY ./packages/server/.env ./packages/server/.env
 
-WORKDIR /app/server
+WORKDIR ./packages/server
 
-RUN yarn build
+ENV NODE_ENV production
 
-ENV NODE_ENV=production
 EXPOSE 4000
 
 CMD ["node", "dist/index.js"]

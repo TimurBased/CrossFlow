@@ -1,10 +1,10 @@
 import express from 'express'
 import cookieParser from 'cookie-parser'
-import userRoutes from './src/routes/user-routes'
-import postRoutes from './src/routes/post-routes'
-import authRoutes from './src/routes/auth-routes'
+import userRoutes from './routes/user-routes'
+import postRoutes from './routes/post-routes'
+import authRoutes from './routes/auth-routes'
 import dotenv from 'dotenv'
-import { createTypeormConn } from './src/utils/createTypeormConn'
+import { createTypeormConn } from './utils/createTypeormConn'
 import cors from 'cors'
 
 dotenv.config()

@@ -9,7 +9,8 @@ build/
 temp/
 dist/
 
-
+/packages/server/.env
+/packages/web/.env
 
 dump.rdb
 *.log
