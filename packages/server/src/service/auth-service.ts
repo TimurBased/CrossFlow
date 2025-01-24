@@ -30,12 +30,12 @@ class AuthService {
 		return { ...userDto, tokens }
 	}
 
-	async login(username: string, password: string) {
+	async login(email: string, password: string) {
 		const candidate = await this.userRepository.findOne({
-			where: { username: username },
+			where: { email: email },
 		})
 		if (!candidate) {
-			throw new Error(`A user with that name ${username} does not exist`)
+			throw new Error(`A user with that name ${email} does not exist`)
 		}
 
 		if (candidate.password !== password) {

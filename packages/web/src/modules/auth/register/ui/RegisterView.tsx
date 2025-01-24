@@ -2,8 +2,9 @@ import React from 'react'
 import { LockOutlined, UserOutlined } from '@ant-design/icons'
 import { Button, Checkbox, Form, Flex } from 'antd'
 import { FormikErrors, FormikProps, withFormik, Field } from 'formik'
-import { validUserSchema } from '@cf/common'
-import { InputField } from '../../shared/InputField'
+import { validUserSchema } from '@crossflow/common'
+import { InputField } from '../../../shared/InputField'
+import { Link } from 'react-router-dom'
 
 interface FormValues {
 	email: string
@@ -40,14 +41,14 @@ const RegisterForm: React.FC<FormikProps<FormValues> & Props> = ({
 						<Form.Item name='remember' valuePropName='checked' noStyle>
 							<Checkbox>Remember me</Checkbox>
 						</Form.Item>
-						<a href=''>Forgot password</a>
+						<Link to='/forgot-password'>Forgot password</Link>
 					</Flex>
 				</Form.Item>
 				<Form.Item>
 					<Button block type='primary' htmlType='submit'>
 						Register
 					</Button>
-					or <a href=''>Login now!</a>
+					or <Link to='/login'>Login now!</Link>
 				</Form.Item>
 			</div>
 		</Form>

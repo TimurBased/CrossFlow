@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react'
 import { RegisterView } from './ui/RegisterView'
-import { useAppSelector, useAppDispatch } from '../../hooks/useAppDispatch'
-import { registrationThunk } from '../../features/authSlice'
+import { useAppSelector, useAppDispatch } from '../../../hooks/useAppDispatch'
+import { registrationThunk } from '../../../features/authSlice'
 
 export const RegisterConnector: React.FC = () => {
 	const { isLoading, error } = useAppSelector(state => state.userSlice)
