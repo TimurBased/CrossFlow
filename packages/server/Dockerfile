@@ -1,14 +1,22 @@
-FROM node:latest
+FROM node
 
-WORKDIR /app
-
-COPY ./.env ./
-COPY ./package.json ./
-COPY . .
+WORKDIR /app/server
 
 RUN npm install -g yarn --force
 
-RUN yarn workspaces focus @crossflow/server --production
+# Копируем только нужные файлы
+# COPY ./yarn.lock /app/
+# COPY ./package.json /app/
+COPY ./package.json /app/server/
+COPY ./.env /app/server/
+COPY ./ /app/server/
+
+WORKDIR /app/server
+
+RUN yarn install --production
+RUN yarn config set registry https://registry.npmjs.org
+
+WORKDIR /app/server
 
 RUN yarn build
 
