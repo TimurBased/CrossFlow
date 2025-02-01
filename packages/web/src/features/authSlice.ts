@@ -1,60 +1,102 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import { login, registration, logout } from '../api/authApi'
-import { LoginFormValues } from '../types/LoginFormValues'
+import AuthService from '../services/auth-service'
+import { IUser } from '../types/IUser'
+import { AuthResponse } from '../types/AuthResponse'
 
-export const loginThunk = createAsyncThunk(
+export const login = createAsyncThunk(
 	'auth/login',
-	async (data: LoginFormValues) => {
-		const response = await login(data)
-		return response
+	async (data: IUser, { rejectWithValue }) => {
+		try {
+			const response: AuthResponse = await AuthService.login(data)
+			return response
+		} catch (error: any) {
+			return rejectWithValue(error.response.data)
+		}
 	}
 )
 
-export const registrationThunk = createAsyncThunk(
+export const register = createAsyncThunk(
 	'auth/registration',
-	async (data: LoginFormValues) => {
-		const response = await registration(data)
-		return response
+	async (data: IUser, { rejectWithValue }) => {
+		try {
+			const response: AuthResponse = await AuthService.registration(data)
+			return response
+		} catch (error: any) {
+			return rejectWithValue(error.response.data)
+		}
 	}
 )
 
-export const logoutThunk = createAsyncThunk('auth/logout', async () => {
-	const response = await logout()
-	return response
-})
+export const logout = createAsyncThunk(
+	'auth/logout',
+	async (_, { rejectWithValue }) => {
+		try {
+			const response = await AuthService.logout()
+			localStorage.removeItem('accessToken')
+			return response
+		} catch (error: any) {
+			return rejectWithValue(error.response.data)
+		}
+	}
+)
 
 export interface User {
-	token: string | null
 	userData: any
 	isLoading: boolean
 	error: string | null
+	isLoggedIn: boolean
 }
 
 const initialState: User = {
-	token: localStorage.getItem('refresh_token') || null,
 	userData: null,
 	isLoading: false,
 	error: null,
+	isLoggedIn: false,
 }
 
-const userSlice = createSlice({
+const authSlice = createSlice({
 	name: 'auth',
 	initialState,
 	reducers: {},
 	extraReducers: builder => {
-		builder.addCase(loginThunk.fulfilled, (state, action) => {
-			state.token = action.payload.tokens.refreshToken
-			state.userData = action.payload.userData
-			state.isLoading = false
-		})
-		builder.addCase(loginThunk.pending, state => {
-			state.isLoading = true
-		})
-		builder.addCase(loginThunk.rejected, state => {
-			state.isLoading = false
-			state.error = 'Login error'
-		})
+		builder
+			.addCase(login.fulfilled, (state, action) => {
+				console.log('Login успешно выполнен!', action.payload)
+				state.isLoading = false
+				state.isLoggedIn = true
+				state.userData = action.payload.userData
+			})
+			.addCase(login.rejected, (state, action) => {
+				state.isLoading = false
+				state.error = action.payload as string
+			})
+			.addCase(register.pending, state => {
+				state.isLoading = true
+				state.error = null
+			})
+			.addCase(register.fulfilled, (state, action) => {
+				state.isLoading = false
+				state.isLoggedIn = true
+				state.userData = action.payload.userData
+			})
+			.addCase(register.rejected, (state, action) => {
+				state.isLoading = false
+				state.error = action.payload as string
+			})
+			.addCase(logout.pending, state => {
+				state.isLoading = true
+				state.error = null
+			})
+			.addCase(logout.fulfilled, state => {
+				state.isLoading = false
+				state.isLoggedIn = false
+				state.userData = null
+			})
+			.addCase(logout.rejected, (state, action) => {
+				state.isLoading = false
+				state.error = action.payload as string
+			})
 	},
 })
 
-export default userSlice.reducer
+export default authSlice.reducer

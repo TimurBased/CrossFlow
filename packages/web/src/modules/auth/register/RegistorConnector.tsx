@@ -1,16 +1,32 @@
-import React, { useCallback } from 'react'
+import React, { useCallback, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { RegisterView } from './ui/RegisterView'
 import { useAppSelector, useAppDispatch } from '../../../hooks/useAppDispatch'
-import { registrationThunk } from '../../../features/authSlice'
+import { register } from '../../../features/authSlice'
 
 export const RegisterConnector: React.FC = () => {
-	const { isLoading, error } = useAppSelector(state => state.userSlice)
+	const { isLoading, error, isLoggedIn } = useAppSelector(state => state.auth)
 	const dispatch = useAppDispatch()
+
+	const navigate = useNavigate()
+
+	useEffect(() => {
+		if (isLoggedIn) {
+			navigate('/')
+		}
+	}, [isLoggedIn, navigate])
+
 	const handleSubmit = useCallback(async (values: any) => {
-		await dispatch(registrationThunk(values))
+		await dispatch(register(values))
+
 		return null
 	}, [])
 	return (
-		<RegisterView isLoading={isLoading} error={error} submit={handleSubmit} />
+		<RegisterView
+			isLoading={isLoading}
+			error={error}
+			isLoggedIn={isLoggedIn}
+			submit={handleSubmit}
+		/>
 	)
 }

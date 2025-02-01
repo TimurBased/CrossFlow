@@ -46,7 +46,7 @@ const LoginForm: React.FC<FormikProps<FormValues> & Props> = ({
 				</Form.Item>
 				<Form.Item>
 					<Button block type='primary' htmlType='submit'>
-						Register
+						Log in
 					</Button>
 					or <Link to='/register'>Register now!</Link>
 				</Form.Item>

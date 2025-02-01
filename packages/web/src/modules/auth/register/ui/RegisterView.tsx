@@ -13,12 +13,14 @@ interface FormValues {
 interface Props {
 	submit: (values: FormValues) => Promise<FormikErrors<FormValues> | null>
 	isLoading: boolean
+	isLoggedIn: boolean
 	error: string | null
 }
 const RegisterForm: React.FC<FormikProps<FormValues> & Props> = ({
 	handleSubmit,
 	isLoading,
 	error,
+	isLoggedIn,
 }) => {
 	return (
 		<Form style={{ display: 'flex' }} onFinish={handleSubmit}>

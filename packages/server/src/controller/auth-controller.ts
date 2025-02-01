@@ -5,11 +5,14 @@ class AuthController {
 	async registration(req: Request, res: Response): Promise<any> {
 		try {
 			// await validUserSchema.validate(req.body)
-
 			const { email, password } = req.body
 			const userData = await authService.registration(email, password)
 			res.cookie('refreshToken', userData.tokens.refreshToken, {
-				maxAge: 30 * 24 * 60 * 60 * 1000,
+				maxAge: 30,
+				httpOnly: true,
+			})
+			res.cookie('accessToken', userData.tokens.accessToken, {
+				maxAge: 24,
 				httpOnly: true,
 			})
 			return res.json(userData)
@@ -27,6 +30,10 @@ class AuthController {
 				maxAge: 30 * 24 * 60 * 60 * 1000,
 				httpOnly: true,
 			})
+			res.cookie('accessToken', userData.tokens.accessToken, {
+				maxAge: 24 * 60 * 60 * 1000,
+				httpOnly: true,
+			})
 			res.json({ userData })
 		} catch (e) {
 			console.log(e)
@@ -37,7 +44,7 @@ class AuthController {
 	async logout(req: Request, res: Response): Promise<any> {
 		try {
 			const { refreshToken } = req.cookies
-			const userData = await authService.logout(refreshToken)
+			await authService.logout(refreshToken)
 			res.clearCookie('refreshToken')
 			return res.json({ message: 'Logout successfully' })
 		} catch (error) {
@@ -51,6 +58,10 @@ class AuthController {
 			const userData = await authService.refresh(refreshToken)
 			res.cookie('refreshToken', userData.tokens.refreshToken, {
 				maxAge: 30 * 24 * 60 * 60 * 1000,
+				httpOnly: true,
+			})
+			res.cookie('accessToken', userData.tokens.accessToken, {
+				maxAge: 24 * 60 * 60 * 1000,
 				httpOnly: true,
 			})
 			res.status(200).json(userData)

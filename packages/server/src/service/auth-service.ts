@@ -62,6 +62,7 @@ class AuthService {
 		const candidate = await this.userRepository.findOne({
 			where: { id: userData.id },
 		})
+
 		const tokenFromDb = tokenService.findToken(refreshToken)
 
 		if (!userData?.id || !tokenFromDb || !candidate) {
@@ -69,8 +70,11 @@ class AuthService {
 		}
 
 		const userDto = new UserDto(candidate.id, candidate.email, candidate.role)
+
 		const tokens = tokenService.generateTokens({ ...userDto })
+
 		await tokenService.saveToken(userDto.id, tokens.refreshToken)
+
 		return { ...userDto, tokens }
 	}
 }

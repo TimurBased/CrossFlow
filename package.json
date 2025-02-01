@@ -5,7 +5,7 @@
 	"private": true,
 	"scripts": {
 		"build:server": "lerna run build --scope={@crossflow/common,@crossflow/server}",
-		"build:web": "lerna run build --scope={@crossflow/common,@crossflow/controller,@crossflow/web}"
+		"build:web": "lerna run build --scope={@crossflow/common,@crossflow/web}"
 	},
 	"workspaces": [
 		"packages/*"
