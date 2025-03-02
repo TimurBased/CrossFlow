@@ -20,4 +20,5 @@ export interface BoardSchema {
 	board: BoardState
 	selectedPiece: { x: number; y: number } | null
 	legalMoves: { x: number; y: number }[]
+	activePlayer: 'w' | 'b'
 }

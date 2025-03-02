@@ -92,10 +92,13 @@ function pawnMove(
 		return true
 	}
 
-	const targetPiece = board[toY][toX]
-
-	if (!isEnemyPiece(type, targetPiece)) {
-		return false
+	if (
+		Math.abs(toX - fromX) === 1 &&
+		toY === fromY + direction &&
+		board[toY][toX] !== null &&
+		isEnemyPiece(type, board[toY][toX])
+	) {
+		return true
 	}
 	// TODO
 	// Эпсилон ход
@@ -120,13 +123,7 @@ function knightMove(
 		return false
 	}
 
-	// Получаем фигуру, стоящую на целевой клетке
-	const targetPiece = board[toY][toX] // Y - строки, X - столбцы
-
-	if (!isEnemyPiece(type, targetPiece)) {
-		return false
-	}
-	return true
+	return !board[toY][toX] || isEnemyPiece(type, board[toY][toX])
 }
 
 function bishopMove(

@@ -16,10 +16,11 @@ type SelectPiecePayload = {
 }
 
 const initialState: BoardSchema = {
-	fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQ - 2 3',
+	fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
 	board: [],
 	selectedPiece: null,
 	legalMoves: [],
+	activePlayer: 'w',
 }
 
 const boardSlice = createSlice({
@@ -34,24 +35,47 @@ const boardSlice = createSlice({
 		},
 		movePiece(state, action: PayloadAction<MovePayload>) {
 			const { FromX, FromY, toX, toY } = action.payload
-			if (FromX === toX && FromY === toY) {
-				console.warn('Не перетащил фигуру')
+
+			const piece = state.board[FromY][FromX]
+
+			const pieceColor = piece?.toUpperCase() == piece ? 'w' : 'b'
+
+			if (pieceColor !== state.activePlayer) {
+				alert('Ход другого игрока')
 				return
 			}
-			const piece = state.board[FromY][FromX]
+
+			// if (FromX === toX && FromY === toY) {
+			// 	console.warn('Не перетащил фигуру')
+			// 	return
+			// }
+
 			if (!piece || !isValidMove(piece, FromX, FromY, toX, toY, state.board)) {
 				console.warn('Неверный ход')
 				return
 			}
+
 			state.board[FromY][FromX] = null
 			state.board[toY][toX] = piece
-			state.fen = boardToFen(state.board)
+
+			state.activePlayer = state.activePlayer === 'w' ? 'b' : 'w'
+
+			state.fen = boardToFen(state.board, state.activePlayer)
+
 			state.selectedPiece = null
 			state.legalMoves = []
 		},
 		selectPiece(state, action: PayloadAction<SelectPiecePayload>) {
 			const { x, y } = action.payload
 			const piece = state.board[y][x]
+
+			const pieceColor = piece?.toUpperCase() == piece ? 'w' : 'b'
+
+			if (pieceColor !== state.activePlayer) {
+				state.selectedPiece = null
+				return
+			}
+
 			if (!piece) {
 				state.selectedPiece = null
 				state.legalMoves = []
@@ -78,19 +102,20 @@ export const { setFen, movePiece, selectPiece, clearSelection } =
 	boardSlice.actions
 export default boardSlice.reducer
 
-function boardToFen(board: BoardState): string {
-	return board
+function boardToFen(board: BoardState, activePlayer: 'w' | 'b'): string {
+	let newFen = board
 		.map(row =>
 			row
 				.map(cell => (cell ? cell : '1'))
 				.join('')
-				.replace(/1{2,}/g, match => match.length.toString())
+				.replace(/1+/g, match => match.length.toString())
 		)
 		.join('/')
-}
 
+	return `${newFen} ${activePlayer}`
+}
 function fenToBoard(fen: string): BoardState {
-	return fen
+	let newBoard = fen
 		.split(' ')[0]
 		.split('/')
 		.map(row =>
@@ -100,4 +125,6 @@ function fenToBoard(fen: string): BoardState {
 					isNaN(Number(item)) ? item : Array(Number(item)).fill(null)
 				)
 		)
+
+	return newBoard
 }
