@@ -1,61 +1,35 @@
-import WhitePawn from '@/shared/assets/icons/WP.png'
-import WhiteKnight from '@/shared/assets/icons/WN.png'
-import WhiteBishop from '@/shared/assets/icons/WB.png'
-import WhiteRook from '@/shared/assets/icons/WR.png'
-import WhiteQueen from '@/shared/assets/icons/WQ.png'
-import WhiteKing from '@/shared/assets/icons/WK.png'
-
-import BlackPawn from '@/shared/assets/icons/BP.png'
-import BlackKnight from '@/shared/assets/icons/BN.png'
-import BlackBishop from '@/shared/assets/icons/BB.png'
-import BlackRook from '@/shared/assets/icons/BR.png'
-import BlackQueen from '@/shared/assets/icons/BQ.png'
-import BlackKing from '@/shared/assets/icons/BK.png'
-
 import { BoardState, Piece } from '../model/types'
-
-export const pieceToComponentMap: Record<string, string> = {
-	P: WhitePawn,
-	N: WhiteKnight,
-	B: WhiteBishop,
-	R: WhiteRook,
-	Q: WhiteQueen,
-	K: WhiteKing,
-	p: BlackPawn,
-	n: BlackKnight,
-	b: BlackBishop,
-	r: BlackRook,
-	q: BlackQueen,
-	k: BlackKing,
-}
+import { isEnemyPiece } from './isEnemyPiece'
+import { canCastle } from './castling'
 
 export function isValidMove(
-	type: Piece,
+	piece: Piece,
+	board: BoardState,
+	fen: string,
 	fromX: number,
 	fromY: number,
 	toX: number,
-	toY: number,
-	board: BoardState
+	toY: number
 ): boolean {
-	switch (type) {
+	switch (piece) {
 		case 'P':
 		case 'p':
-			return pawnMove(type, fromX, fromY, toX, toY, board)
+			return pawnMove(piece, fromX, fromY, toX, toY, board)
 		case 'N':
 		case 'n':
-			return knightMove(type, fromX, fromY, toX, toY, board)
+			return knightMove(piece, fromX, fromY, toX, toY, board)
 		case 'B':
 		case 'b':
-			return bishopMove(type, fromX, fromY, toX, toY, board)
+			return bishopMove(piece, fromX, fromY, toX, toY, board)
 		case 'R':
 		case 'r':
-			return rookMove(type, fromX, fromY, toX, toY, board)
+			return rookMove(piece, fromX, fromY, toX, toY, board)
 		case 'Q':
 		case 'q':
-			return queenMove(type, fromX, fromY, toX, toY, board)
+			return queenMove(piece, fromX, fromY, toX, toY, board)
 		case 'K':
 		case 'k':
-			return kingMove(type, fromX, fromY, toX, toY, board)
+			return kingMove(piece, fromX, fromY, toX, toY, board, fen)
 		default:
 			console.log('move is default')
 			return false
@@ -201,8 +175,10 @@ function kingMove(
 	fromY: number,
 	toX: number,
 	toY: number,
-	board: BoardState
+	board: BoardState,
+	fen: string
 ): boolean {
+	// Обычный ход короля
 	if (Math.abs(fromX - toX) <= 1 && Math.abs(fromY - toY) <= 1) {
 		const targetPiece = board[toY][toX]
 
@@ -211,15 +187,34 @@ function kingMove(
 		}
 		return true
 	}
+
+	// Проверка рокировки
+	if (type === 'K' || type === 'k') {
+		const isWhite = type === 'K'
+		const kingRow = isWhite ? 7 : 0
+
+		// Короткая рокировка (король перемещается на две клетки вправо)
+		if (
+			fromX === 4 &&
+			fromY === kingRow &&
+			toX === 6 &&
+			toY === kingRow &&
+			canCastle(board, fen, fromX, fromY, toX, true, isWhite)
+		) {
+			return true
+		}
+
+		// Длинная рокировка (король перемещается на две клетки влево)
+		if (
+			fromX === 4 &&
+			fromY === kingRow &&
+			toX === 2 &&
+			toY === kingRow &&
+			canCastle(board, fen, fromX, fromY, toX, false, isWhite)
+		) {
+			return true
+		}
+	}
+
 	return false
-}
-
-function isEnemyPiece(currentPiece: Piece, targetPiece: Piece | null): boolean {
-	if (!targetPiece) return true
-
-	const isCurrentWhite = currentPiece === currentPiece.toUpperCase()
-
-	const isTargetWhite = targetPiece === targetPiece.toUpperCase()
-
-	return isCurrentWhite !== isTargetWhite
 }

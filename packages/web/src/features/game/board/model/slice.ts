@@ -1,8 +1,9 @@
-// model/slice.ts
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
-import { BoardSchema, BoardState } from './types'
-import { isValidMove } from '../lib/utils'
-
+import { BoardSchema } from './types'
+import { isValidMove } from '../lib/isValidMove'
+import { fenToBoard, boardToFen } from '../lib/fenOperation'
+import { canCastle, kingSpecialMoves } from '../lib/castling'
+import { isCheck } from '../lib/isCheck'
 type MovePayload = {
 	FromX: number
 	FromY: number
@@ -16,11 +17,13 @@ type SelectPiecePayload = {
 }
 
 const initialState: BoardSchema = {
-	fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+	fen: 'r1k4r/p2nb1p1/2b4p/1p1n1p2/2PP4/3Q1NB1/1P3PPP/R5K1 b - - 0 19',
 	board: [],
+	activePlayer: 'w',
 	selectedPiece: null,
 	legalMoves: [],
-	activePlayer: 'w',
+	isCheck: false,
+	gameState: 'active',
 }
 
 const boardSlice = createSlice({
@@ -40,23 +43,56 @@ const boardSlice = createSlice({
 
 			const pieceColor = piece?.toUpperCase() == piece ? 'w' : 'b'
 
-			if (pieceColor !== state.activePlayer) {
-				alert('Ход другого игрока')
-				return
-			}
-
-			// if (FromX === toX && FromY === toY) {
-			// 	console.warn('Не перетащил фигуру')
-			// 	return
-			// }
-
-			if (!piece || !isValidMove(piece, FromX, FromY, toX, toY, state.board)) {
+			if (
+				!piece ||
+				!isValidMove(piece, state.board, state.fen, FromX, FromY, toX, toY)
+			) {
 				console.warn('Неверный ход')
 				return
 			}
 
-			state.board[FromY][FromX] = null
-			state.board[toY][toX] = piece
+			if (
+				piece.toUpperCase() === 'K' &&
+				((Math.abs(toX - FromX) === 2 && FromY === toY) ||
+					(FromX === 4 && FromY === (pieceColor === 'w' ? 7 : 0)))
+			) {
+				const isKingSide = toX > FromX // Короткая рокировка, если toX > FromX
+
+				// Проверяем возможность рокировки
+				if (
+					!canCastle(
+						state.board,
+						state.fen,
+						FromX,
+						FromY,
+						toX,
+						isKingSide,
+						pieceColor === 'w'
+					)
+				) {
+					console.warn('Рокировка невозможна')
+					return
+				}
+				// Выполняем рокировку
+				state.board = kingSpecialMoves(
+					state.board,
+					pieceColor === 'w',
+					FromX,
+					FromY,
+					toX,
+					toY
+				)
+
+				// Обновляем FEN
+				state.fen = boardToFen(state.board, state.activePlayer)
+			} else {
+				// Обычный ход
+				state.board[FromY][FromX] = null
+				state.board[toY][toX] = piece
+
+				// Обновляем FEN
+				state.fen = boardToFen(state.board, state.activePlayer)
+			}
 
 			state.activePlayer = state.activePlayer === 'w' ? 'b' : 'w'
 
@@ -85,7 +121,7 @@ const boardSlice = createSlice({
 			state.legalMoves = []
 			for (let i = 0; i < 8; ++i) {
 				for (let j = 0; j < 8; ++j) {
-					if (isValidMove(piece, x, y, j, i, state.board)) {
+					if (isValidMove(piece, state.board, state.fen, x, y, j, i)) {
 						state.legalMoves.push({ x: j, y: i })
 					}
 				}
@@ -101,30 +137,3 @@ const boardSlice = createSlice({
 export const { setFen, movePiece, selectPiece, clearSelection } =
 	boardSlice.actions
 export default boardSlice.reducer
-
-function boardToFen(board: BoardState, activePlayer: 'w' | 'b'): string {
-	let newFen = board
-		.map(row =>
-			row
-				.map(cell => (cell ? cell : '1'))
-				.join('')
-				.replace(/1+/g, match => match.length.toString())
-		)
-		.join('/')
-
-	return `${newFen} ${activePlayer}`
-}
-function fenToBoard(fen: string): BoardState {
-	let newBoard = fen
-		.split(' ')[0]
-		.split('/')
-		.map(row =>
-			row
-				.match(/(\d+|[PNBRQKpnbrqk])/g)!
-				.flatMap(item =>
-					isNaN(Number(item)) ? item : Array(Number(item)).fill(null)
-				)
-		)
-
-	return newBoard
-}

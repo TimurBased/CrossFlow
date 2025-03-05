@@ -1,7 +1,7 @@
 import React, { useRef } from 'react'
 import { useDrag } from 'react-dnd'
 import styled from 'styled-components'
-import { pieceToComponentMap } from '../lib/utils'
+import { pieceToComponentMap } from '@/features/game/board/model/types'
 
 interface FigureProps {
 	piece: string
