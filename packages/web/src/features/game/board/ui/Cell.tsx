@@ -1,25 +1,15 @@
 import React, { useRef } from 'react'
 import styled from 'styled-components'
-import Figure from './Figure'
 import { useDrop } from 'react-dnd'
-import { movePiece, clearSelection } from '../model/slice'
 import { useAppDispatch } from '@/hooks/useAppDispatch'
-
-interface CellProps {
-	piece: string | null
-	isDark: boolean
-	isLegalMove: boolean
-	onClick: () => void
-	position: { x: number; y: number }
-	activePlayer: 'w' | 'b'
-}
+import { Piece, Square } from '../lib/chess'
+import { clearSelection, makeMove, selectPiece } from '../model/slice'
+import Figure from './Figure'
 
 const CellContainer = styled.div<{
-	isLegalMove?: boolean
 	isDark: boolean
+	isLegalMove?: boolean
 	isOver?: boolean
-	activePlayer: 'w' | 'b'
-	piece: string | null
 }>`
 	width: 75px;
 	height: 75px;
@@ -45,54 +35,50 @@ const CellContainer = styled.div<{
 	}
 `
 
+interface CellProps {
+	piece: Piece | null
+	isDark: boolean
+	isLegalMove: boolean
+	onClick: () => void
+	square: Square
+}
+
 const Cell: React.FC<CellProps> = ({
 	piece,
 	isDark,
 	isLegalMove,
 	onClick,
-	position,
-	activePlayer,
+	square,
 }) => {
-	const ref = useRef<HTMLImageElement>(null)
+	const ref = useRef<HTMLDivElement>(null)
 
 	const dispatch = useAppDispatch()
 
-	const [{ isOver }, drop] = useDrop(
-		() => ({
-			accept: 'chess-piece',
-			drop: (item: { FromX: number; FromY: number }) => {
-				dispatch(
-					isLegalMove
-						? movePiece({
-								FromX: item.FromX,
-								FromY: item.FromY,
-								toX: position.x,
-								toY: position.y,
-						  })
-						: clearSelection()
-				)
-			},
-			collect: monitor => ({
-				isOver: monitor.isOver(),
-			}),
+	const [{ isOver }, drop] = useDrop(() => ({
+		accept: 'chess-piece',
+		drop: (item: { from: Square }) => {
+			dispatch(
+				/*isLegalMove
+					? makeMove({ from: item.from, to: square })
+					:*/ makeMove({ from: item.from, to: square })
+			)
+		},
+		collect: monitor => ({
+			isOver: monitor.isOver(),
 		}),
-		[dispatch, isLegalMove, position]
-	)
+	}))
 
-	//КОСТЫЛЬ
 	drop(ref)
 
 	return (
 		<CellContainer
 			ref={ref}
-			piece={piece}
 			isDark={isDark}
 			isLegalMove={isLegalMove}
 			isOver={isOver}
-			activePlayer={activePlayer}
 			onClick={onClick}
 		>
-			{piece && <Figure piece={piece} position={position} />}
+			{piece && <Figure piece={piece} square={square} />}
 		</CellContainer>
 	)
 }

@@ -1,25 +1,10 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 import { BoardSchema } from './types'
-import { isValidMove } from '../lib/isValidMove'
-import { fenToBoard, boardToFen } from '../lib/fenOperation'
-import { canCastle, kingSpecialMoves } from '../lib/castling'
-import { isCheck } from '../lib/isCheck'
-type MovePayload = {
-	FromX: number
-	FromY: number
-	toX: number
-	toY: number
-}
-
-type SelectPiecePayload = {
-	x: number
-	y: number
-}
+import { Chess, Square, squareToIndex } from '../lib/chess'
 
 const initialState: BoardSchema = {
-	fen: 'r1k4r/p2nb1p1/2b4p/1p1n1p2/2PP4/3Q1NB1/1P3PPP/R5K1 b - - 0 19',
-	board: [],
-	activePlayer: 'w',
+	game: new Chess('7k/3Q4/8/2r1b3/8/K1R1B3/8/3q4 w - - 0 1'),
+	fen: '',
 	selectedPiece: null,
 	legalMoves: [],
 	isCheck: false,
@@ -30,102 +15,24 @@ const boardSlice = createSlice({
 	name: 'board',
 	initialState,
 	reducers: {
-		setFen(state, action: { payload: string }) {
-			state.fen = action.payload
-			state.board = fenToBoard(action.payload)
-			state.selectedPiece = null
+		makeMove(state, action: PayloadAction<{ from: Square; to: Square }>) {
+			const { from, to } = action.payload
+			state.game.MovePiece(from, to)
+			state.fen = state.game.toFen()
+			state.isCheck = false
+			state.gameState = state.game.isGameFinished() ? 'checkmate' : 'active'
 			state.legalMoves = []
 		},
-		movePiece(state, action: PayloadAction<MovePayload>) {
-			const { FromX, FromY, toX, toY } = action.payload
+		selectPiece(state, action: PayloadAction<Square>) {
+			const square = action.payload
+			const piece = state.game.getBoard()[squareToIndex(square)]
 
-			const piece = state.board[FromY][FromX]
-
-			const pieceColor = piece?.toUpperCase() == piece ? 'w' : 'b'
-
-			if (
-				!piece ||
-				!isValidMove(piece, state.board, state.fen, FromX, FromY, toX, toY)
-			) {
-				console.warn('Неверный ход')
-				return
-			}
-
-			if (
-				piece.toUpperCase() === 'K' &&
-				((Math.abs(toX - FromX) === 2 && FromY === toY) ||
-					(FromX === 4 && FromY === (pieceColor === 'w' ? 7 : 0)))
-			) {
-				const isKingSide = toX > FromX // Короткая рокировка, если toX > FromX
-
-				// Проверяем возможность рокировки
-				if (
-					!canCastle(
-						state.board,
-						state.fen,
-						FromX,
-						FromY,
-						toX,
-						isKingSide,
-						pieceColor === 'w'
-					)
-				) {
-					console.warn('Рокировка невозможна')
-					return
-				}
-				// Выполняем рокировку
-				state.board = kingSpecialMoves(
-					state.board,
-					pieceColor === 'w',
-					FromX,
-					FromY,
-					toX,
-					toY
-				)
-
-				// Обновляем FEN
-				state.fen = boardToFen(state.board, state.activePlayer)
-			} else {
-				// Обычный ход
-				state.board[FromY][FromX] = null
-				state.board[toY][toX] = piece
-
-				// Обновляем FEN
-				state.fen = boardToFen(state.board, state.activePlayer)
-			}
-
-			state.activePlayer = state.activePlayer === 'w' ? 'b' : 'w'
-
-			state.fen = boardToFen(state.board, state.activePlayer)
-
-			state.selectedPiece = null
-			state.legalMoves = []
-		},
-		selectPiece(state, action: PayloadAction<SelectPiecePayload>) {
-			const { x, y } = action.payload
-			const piece = state.board[y][x]
-
-			const pieceColor = piece?.toUpperCase() == piece ? 'w' : 'b'
-
-			if (pieceColor !== state.activePlayer) {
+			if (!piece || piece.color !== state.game.getActivePlayer()) {
 				state.selectedPiece = null
 				return
 			}
-
-			if (!piece) {
-				state.selectedPiece = null
-				state.legalMoves = []
-				return
-			}
-			state.selectedPiece = { x, y }
-			state.legalMoves = []
-			for (let i = 0; i < 8; ++i) {
-				for (let j = 0; j < 8; ++j) {
-					if (isValidMove(piece, state.board, state.fen, x, y, j, i)) {
-						state.legalMoves.push({ x: j, y: i })
-					}
-				}
-			}
+			state.legalMoves = state.game.generateMoves(piece, square)
+			state.selectedPiece = square
 		},
 		clearSelection(state) {
 			state.selectedPiece = null
@@ -134,6 +41,5 @@ const boardSlice = createSlice({
 	},
 })
 
-export const { setFen, movePiece, selectPiece, clearSelection } =
-	boardSlice.actions
+export const { makeMove, selectPiece, clearSelection } = boardSlice.actions
 export default boardSlice.reducer

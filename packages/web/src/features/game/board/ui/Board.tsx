@@ -1,84 +1,89 @@
-import React, { useEffect, useCallback } from 'react'
+import React, { useCallback } from 'react'
 import styled from 'styled-components'
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 import { useAppSelector, useAppDispatch } from '@/hooks/useAppDispatch'
-import { setFen, selectPiece, clearSelection, movePiece } from '../model/slice'
 import Cell from './Cell'
+import { Square } from 'chess.js'
+import { makeMove, selectPiece, clearSelection } from '../model/slice'
+import NotationFile from './NotationFile'
+import NotationRank from './NotationRank'
+import { indexToSquare, squareToIndex } from '../lib/chess'
+
+const BoardWrapper = styled.div`
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	width: 100%;
+	margin-top: 10px;
+`
 
 const BoardContainer = styled.div`
 	display: grid;
-	grid-template-columns: repeat(8, 75px);
-	grid-template-rows: repeat(8, 75px);
+	border-radius: 5px;
+	overflow: hidden;
+	grid-template-columns: repeat(8, 1fr);
+	grid-template-rows: repeat(8, 1fr);
+
+	/* Размер адаптируется под экран */
+	width: min(90vw, 90vh, 600px);
+	height: min(90vw, 90vh, 600px);
+
+	/* Гарантируем квадратную форму */
+	aspect-ratio: 1 / 1;
+	min-width: 280px;
+	min-height: 280px;
+	position: relative;
 `
 
 const Board: React.FC = () => {
+	const { game, selectedPiece, legalMoves } = useAppSelector(
+		state => state.board
+	)
 	const dispatch = useAppDispatch()
-	const { board, fen, selectedPiece, legalMoves, activePlayer } =
-		useAppSelector(state => state.board)
 
-	useEffect(() => {
-		dispatch(setFen(fen))
-	}, [fen, dispatch])
-
-	const handleClick = useCallback(
-		(x: number, y: number) => {
-			const clickedPiece = board[y][x]
-
-			const pieceColor = clickedPiece
-				? clickedPiece === clickedPiece.toUpperCase()
-					? 'w'
-					: 'b'
-				: null
-
-			if (selectedPiece) {
-				if (legalMoves.some(move => move.x === x && move.y === y)) {
-					dispatch(
-						movePiece({
-							FromX: selectedPiece.x,
-							FromY: selectedPiece.y,
-							toX: x,
-							toY: y,
-						})
-					)
-				} else {
-					if (clickedPiece && pieceColor === activePlayer) {
-						dispatch(selectPiece({ x, y }))
-					} else {
-						dispatch(clearSelection())
-					}
-				}
+	const handleClick = useCallback((square: Square) => {
+		const clickedPiece = game.getBoard()[squareToIndex(square)]
+		if (selectedPiece) {
+			if (legalMoves.some(move => move === square)) {
+				dispatch(makeMove({ from: square, to: selectedPiece }))
 			} else {
-				if (clickedPiece && pieceColor === activePlayer) {
-					dispatch(selectPiece({ x, y }))
+				if (clickedPiece && clickedPiece?.color == game.getActivePlayer()) {
+					dispatch(selectPiece(square))
+				} else {
+					dispatch(clearSelection())
 				}
 			}
-		},
-		[dispatch, board, selectedPiece, activePlayer, legalMoves]
-	)
+		} else {
+			if (clickedPiece && clickedPiece?.color === game.getActivePlayer()) {
+				dispatch(selectPiece(square))
+			}
+		}
+	}, [])
 
 	return (
 		<DndProvider backend={HTML5Backend}>
-			<h2>Player color move: {activePlayer}</h2>
-			<BoardContainer>
-				{board.map((row, y) =>
-					row.map((cell, x) => (
+			<h2>Player color move: {game.getActivePlayer()}</h2>
+			<BoardWrapper>
+				<BoardContainer>
+					<NotationFile />
+					<NotationRank />
+					{game.getBoard().map((cell, index) => (
 						<Cell
-							key={`${y}-${x}`}
+							key={index}
 							piece={cell}
-							isDark={(x + y) % 2 !== 0}
 							isLegalMove={legalMoves.some(
-								move => move.x === x && move.y === y
+								move => move === indexToSquare(index)
 							)}
-							activePlayer={activePlayer}
-							onClick={() => handleClick(x, y)}
-							position={{ x, y }}
+							isDark={((index % 8) + Math.floor(index / 8)) % 2 === 1}
+							onClick={() => handleClick(indexToSquare(index))}
+							square={indexToSquare(index)}
 						/>
-					))
-				)}
-			</BoardContainer>
+					))}
+				</BoardContainer>
+			</BoardWrapper>
 		</DndProvider>
 	)
 }
 
-export default Board
+export default React.memo(Board)

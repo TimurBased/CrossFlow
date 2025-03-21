@@ -11,32 +11,15 @@ import BlackBishop from '@/shared/assets/icons/BB.png'
 import BlackRook from '@/shared/assets/icons/BR.png'
 import BlackQueen from '@/shared/assets/icons/BQ.png'
 import BlackKing from '@/shared/assets/icons/BK.png'
-
-export type Piece =
-	| 'P'
-	| 'N'
-	| 'B'
-	| 'R'
-	| 'Q'
-	| 'K'
-	| 'p'
-	| 'n'
-	| 'b'
-	| 'r'
-	| 'q'
-	| 'k'
-
-export type Row = (Piece | null)[]
-export type BoardState = Row[]
+import { Chess, Square } from '../lib/chess'
 
 export interface BoardSchema {
-	fen: string
-	board: BoardState
-	selectedPiece: { x: number; y: number } | null
-	legalMoves: { x: number; y: number }[]
-	activePlayer: 'w' | 'b'
+	game: Chess
+	selectedPiece: Square | null
+	legalMoves: Square[]
 	isCheck: boolean
 	gameState: 'active' | 'checkmate' | 'stalemate' | 'draw'
+	fen: string
 }
 
 export const pieceToComponentMap: Record<string, string> = {
