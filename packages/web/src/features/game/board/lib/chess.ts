@@ -1,6 +1,7 @@
 export const WHITE = 'w'
 export const BLACK = 'b'
 
+export const EMPTY = 'e'
 export const PAWN = 'p'
 export const KNIGHT = 'n'
 export const BISHOP = 'b'
@@ -9,7 +10,7 @@ export const QUEEN = 'q'
 export const KING = 'k'
 
 export type Color = typeof WHITE | typeof BLACK
-export type PieceSymbol = 'p' | 'n' | 'b' | 'r' | 'q' | 'k'
+export type PieceSymbol = 'p' | 'n' | 'b' | 'r' | 'q' | 'k' | 'e' | 'o' // 'e' is empty cell and 'o' its part of 0x88 algorithm
 
 // prettier-ignore
 export type Square =
@@ -22,361 +23,457 @@ export type Square =
     'a2' | 'b2' | 'c2' | 'd2' | 'e2' | 'f2' | 'g2' | 'h2' |
     'a1' | 'b1' | 'c1' | 'd1' | 'e1' | 'f1' | 'g1' | 'h1'
 
+// prettier-ignore
+// eslint-disable-next-line
+export const Ox88: Record<Square, number> = {
+  a8:   0, b8:   1, c8:   2, d8:   3, e8:   4, f8:   5, g8:   6, h8:   7,
+  a7:  16, b7:  17, c7:  18, d7:  19, e7:  20, f7:  21, g7:  22, h7:  23,
+  a6:  32, b6:  33, c6:  34, d6:  35, e6:  36, f6:  37, g6:  38, h6:  39,
+  a5:  48, b5:  49, c5:  50, d5:  51, e5:  52, f5:  53, g5:  54, h5:  55,
+  a4:  64, b4:  65, c4:  66, d4:  67, e4:  68, f4:  69, g4:  70, h4:  71,
+  a3:  80, b3:  81, c3:  82, d3:  83, e3:  84, f3:  85, g3:  86, h3:  87,
+  a2:  96, b2:  97, c2:  98, d2:  99, e2: 100, f2: 101, g2: 102, h2: 103,
+  a1: 112, b1: 113, c1: 114, d1: 115, e1: 116, f1: 117, g1: 118, h1: 119
+}
+
 export const DEFAULT_POSITION =
-	'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+  'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
 export type Piece = {
-	color: Color
-	type: PieceSymbol
+  color: Color
+  type: PieceSymbol
 }
 
 export type InternalMove = {
-	fromIndex: number
-	toIndex: number
-	piece: Piece
-	captured?: Piece
-	promotion?: Piece
+  fromIndex: number
+  toIndex: number
+  piece: Piece
+  captured?: Piece
+  promotion?: Piece
 }
 
 const pawnDirectionOffsets = {
-	b: [8, 16, 7, 9],
-	w: [-8, -16, -7, -9],
+  b: [16, 32, 15, 17],
+  w: [-16, -32, -15, -17],
 }
 
 const pieceDirectionOffsets = {
-	n: [17, -17, 15, -15, 10, -10, 6, -6],
-	b: [9, -9, 7, -7],
-	r: [8, -8, 1, -1],
-	q: [9, -9, 7, -7, 8, -8, 1, -1],
-	k: [9, -9, 7, -7, 8, -8, 1, -1],
+  n: [-18, -33, -31, -14, 18, 33, 31, 14],
+  b: [-17, -15, 17, 15],
+  r: [-16, 1, 16, -1],
+  q: [-17, -16, -15, 1, 17, 16, 15, -1],
+  k: [-17, -16, -15, 1, 17, 16, 15, -1],
 }
 
 export function squareToIndex(square: Square): number {
-	const file = square.charCodeAt(0) - 97
-	const rank = 8 - parseInt(square[1], 10)
-	return rank * 8 + file
+  return Ox88[square]
 }
 
 export function indexToSquare(index: number): Square {
-	const file = String.fromCharCode((index % 8) + 97)
-	const rank = 8 - Math.floor(index / 8)
-	return `${file}${rank}` as Square
+  const f = getFile(index)
+  const r = getRank(index)
+  return ('abcdefgh'.substring(f, f + 1) +
+    '87654321'.substring(r, r + 1)) as Square
 }
 
 export function getFile(index: number): number {
-	return (index % 8) + 1
+  return index & 0xf
 }
+
 export function getRank(index: number): number {
-	return 8 - Math.floor(index / 8)
+  return index >> 4
 }
 
 export class Chess {
-	private _board: (Piece | null)[] = new Array(64).fill(null)
-	private _activePlayer: Color = WHITE
-	private _kings: Record<Color, number> = { w: -1, b: -1 }
-	private _moveHistory: Move[] = []
-	private _isGameOver: boolean = false
+  private _board: Piece[] = new Array(128).fill({ type: 'e' } as Piece)
+  private _activePlayer: Color = WHITE
+  _kings: Record<Color, number> = { w: -1, b: -1 }
+  private _moveHistory: Move[] = []
+  private _isGameOver: boolean = false
 
-	constructor(fen: string = DEFAULT_POSITION) {
-		this.loadPosition(fen)
-	}
+  constructor(fen: string = DEFAULT_POSITION) {
+    this.loadPosition(fen)
+    console.log('making chess instance')
+  }
 
-	public loadPosition(fen: string): void {
-		const [position, turn, castling, enPassant, halfMoves, fullMoves] =
-			fen.split(' ')
+  public loadPosition(fen: string): void {
+    const [position, turn] = fen.split(' ')
 
-		this._board.fill(null)
+    let square = 0
+    for (let i = 0; i < position.length; i++) {
+      const piece = position.charAt(i)
 
-		let squareIndex = 0
-		for (const char of position) {
-			if (char === '/') {
-				continue
-			} else if (/\d/.test(char)) {
-				squareIndex += parseInt(char, 10)
-			} else {
-				const color: Color = char === char.toLowerCase() ? 'b' : 'w'
-				const type: PieceSymbol = char.toLowerCase() as PieceSymbol
-				this._board[squareIndex] = { color, type }
-				squareIndex++
-			}
-		}
+      if (piece === '/') {
+        square += 8
+      } else if (/\d/.test(piece)) {
+        square += parseInt(piece, 10)
+      } else {
+        const color: Color = piece === piece.toLowerCase() ? BLACK : WHITE
+        const type: PieceSymbol = piece.toLowerCase() as PieceSymbol
+        this._putPiece({ type: type, color }, indexToSquare(square))
+        square++
+      }
+    }
 
-		this._activePlayer = turn === 'w' ? 'w' : 'b'
+    this._activePlayer = turn === WHITE ? WHITE : BLACK
 
-		// TODO: Добавить обработку рокировки, взятия на проходе и счетчиков ходов
-	}
+    // TODO: Добавить обработку рокировки, взятия на проходе и счетчиков ходов
+  }
 
-	public MovePiece(from: Square, to: Square): Move | null {
-		const fromIndex = squareToIndex(from)
-		const toIndex = squareToIndex(to)
+  private _putPiece(
+    { type, color }: { type: PieceSymbol; color: Color },
+    square: Square
+  ): boolean {
+    // check for piece
+    if ('pnbrqkPNBRQK'.indexOf(type.toLowerCase()) === -1) {
+      return false
+    }
 
-		const piece = this._board[fromIndex]
-		if (!piece) {
-			console.warn('На начальной клетке нет фигуры')
-			return null
-		}
-		const possibleMoves = this.generateMoves(piece, from)
-		if (!possibleMoves.includes(to)) {
-			console.log('no valid move')
-			return null
-		}
-		this._board[toIndex] = piece
-		this._board[fromIndex] = null
+    // check for valid square
+    if (!(square in Ox88)) {
+      return false
+    }
 
-		const move = new Move({ fromIndex, toIndex, piece } as InternalMove)
-		this._moveHistory.push(move)
+    const sq = Ox88[square]
 
-		this._activePlayer = this._activePlayer === WHITE ? BLACK : WHITE
+    this._board[sq] = { type: type as PieceSymbol, color: color as Color }
 
-		// TODO: Проверить состояние игры
-		return move
-	}
+    if (type === KING) {
+      this._kings[color] = sq
+    }
 
-	public generateMoves(piece: Piece, startSquare: Square): Square[] {
-		let moves: Square[] = []
-		const startSquareIndex: number = squareToIndex(startSquare)
+    return true
+  }
 
-		switch (piece.type) {
-			case PAWN:
-				moves = [...this._generatePawnMoves(startSquareIndex, piece.color)]
-				break
-			case KNIGHT:
-				moves = [...this._generateKnightMoves(startSquareIndex, piece.color)]
-				break
-			case KING:
-				moves = [...this._generateKingMoves(startSquareIndex, piece.color)]
-				break
-			default:
-				moves = [...this._generateSlidingMoves(startSquareIndex, piece)]
-				break
-		}
-		console.log(moves)
-		return moves
-	}
+  public MovePiece(from: Square, to: Square): Move | null {
+    const fromIndex = squareToIndex(from)
+    const toIndex = squareToIndex(to)
 
-	private _generatePawnMoves(startSquareIndex: number, color: Color): Square[] {
-		const moves: Square[] = []
-		const directions = pawnDirectionOffsets[color]
-		for (let i = 0; i < directions.length; i++) {
-			const offset = directions[i]
-			const targetSquare = startSquareIndex + offset
+    const piece = this._board[fromIndex]
+    if (piece.color !== this._activePlayer) return null
 
-			// Первый шаг (одно поле вперед)
-			if (i === 0 && this._isValidMove(startSquareIndex, targetSquare)) {
-				if (!this._board[targetSquare]) {
-					moves.push(indexToSquare(targetSquare))
-				}
-			}
+    const possibleMoves = this.generateMoves(piece, from)
+    if (!possibleMoves.includes(to)) {
+      return null
+    }
+    this._board[toIndex] = piece
+    this._board[fromIndex] = { type: 'e' } as Piece
 
-			// Второй шаг (два поля вперед, только из начальной позиции)
-			if (i === 1) {
-				const isStartingRank =
-					(color === 'w' && startSquareIndex >= 48 && startSquareIndex <= 55) ||
-					(color === 'b' && startSquareIndex >= 8 && startSquareIndex <= 15)
-				if (
-					isStartingRank &&
-					!this._board[startSquareIndex + directions[0]] &&
-					!this._board[targetSquare] &&
-					this._isValidMove(startSquareIndex, targetSquare)
-				) {
-					moves.push(indexToSquare(targetSquare))
-				}
-			}
+    //если ход короля то в записи меняем координаты короля с текущим цветом
+    if (piece.type === KING) {
+      this._kings[piece.color] = toIndex
+    }
+    const move = new Move({ fromIndex, toIndex, piece } as InternalMove)
+    this._moveHistory.push(move)
 
-			// Взятие по диагонали
-			if (
-				(i === 2 || i === 3) &&
-				this._isValidMove(startSquareIndex, targetSquare)
-			) {
-				const targetPiece = this._board[targetSquare]
-				if (targetPiece && targetPiece.color !== color) {
-					moves.push(indexToSquare(targetSquare))
-				}
-			}
-		}
-		return moves
-	}
-	private _generateKingMoves(startSquareIndex: number, color: Color): Square[] {
-		const directions = pieceDirectionOffsets[KING]
-		const moves: Square[] = []
-		for (const offset of directions) {
-			let targetSquare = startSquareIndex + offset
-			if (this._isValidMove(startSquareIndex, targetSquare)) {
-				const targetPiece = this._board[targetSquare]
+    this._activePlayer = this.swapColor(this._activePlayer)
 
-				if (!targetPiece || targetPiece.color !== color) {
-					moves.push(indexToSquare(targetSquare))
-				}
-			}
-		}
-		return moves
-	}
+    // TODO: Проверить состояние игры
+    return move
+  }
 
-	private _generateKnightMoves(
-		startSquareIndex: number,
-		color: Color
-	): Square[] {
-		const directions = pieceDirectionOffsets[KNIGHT]
-		const moves: Square[] = []
-		for (const offset of directions) {
-			let targetSquare = startSquareIndex + offset
-			if (this._isValidMove(startSquareIndex, targetSquare, true)) {
-				const targetPiece = this._board[targetSquare]
+  swapColor(color: Color): Color {
+    return color === WHITE ? BLACK : WHITE
+  }
+  isAttacked(color: Color, squareIndex: number): boolean
+  isAttacked(color: Color, squareIndex: number, verbose: false): boolean
+  isAttacked(color: Color, squareIndex: number, verbose: true): Square[]
+  isAttacked(color: Color, squareIndex: number, verbose?: boolean) {
+    const attackers: Square[] = []
+    for (let i = Ox88.a8; i <= Ox88.h1; i++) {
+      // did we run off the end of the board
+      if (i & 0x88) {
+        i += 7
+        continue
+      }
 
-				if (!targetPiece || targetPiece.color !== color) {
-					moves.push(indexToSquare(targetSquare))
-				}
-			}
-		}
-		return moves
-	}
+      // if empty square or wrong color
+      if (this._board[i].type === 'e' || this._board[i].color === color) {
+        continue
+      }
 
-	private _generateSlidingMoves(
-		startSquareIndex: number,
-		piece: Piece
-	): Square[] {
-		const moves: Square[] = []
+      const piece = this._board[i]
+      if (piece.type !== 'k') {
+        const possibleMoves = this.generateMoves(piece, indexToSquare(i))
+        console.log(piece?.type)
+        if (possibleMoves.includes(indexToSquare(squareIndex))) {
+          if (verbose) {
+            attackers.push(indexToSquare(i))
+            continue
+          } else return true
+        }
+      }
+    }
 
-		const directions =
-			piece.type === QUEEN
-				? pieceDirectionOffsets[QUEEN]
-				: piece.type === BISHOP
-				? pieceDirectionOffsets[BISHOP]
-				: pieceDirectionOffsets[ROOK]
+    if (verbose) {
+      return attackers
+    } else {
+      return false
+    }
+  }
 
-		for (const offset of directions) {
-			let targetSquare = startSquareIndex + offset
-			while (this._isValidMove(startSquareIndex, targetSquare)) {
-				const targetPiece = this._board[targetSquare]
+  public isKingAttacked(color: Color): boolean {
+    return this.isAttacked(color, this._kings[color])
+  }
+  public isCheck(): boolean {
+    return this.isKingAttacked(this._activePlayer)
+  }
+  public generateMoves(piece: Piece, startSquare: Square): Square[] {
+    const sq = Ox88[startSquare]
+    const moves: Square[] = []
 
-				if (!targetPiece) {
-					moves.push(indexToSquare(targetSquare))
-				}
+    switch (piece.type) {
+      case 'p':
+        moves.push(...this._generatePawnMoves(sq, piece.color))
+        break
+      case 'n':
+        moves.push(...this._generateKnightMoves(sq, piece.color))
+        break
+      case 'k':
+        moves.push(...this._generateKingMoves(sq, piece.color))
+        break
+      default:
+        moves.push(...this._generateSlidingMoves(sq, piece))
+        break
+    }
 
-				if (targetPiece && targetPiece.color !== piece.color) {
-					moves.push(indexToSquare(targetSquare))
-					break
-				}
+    // console.log(moves)
+    return moves
+  }
 
-				if (targetPiece && targetPiece.color === piece.color) {
-					break
-				}
+  private _generatePawnMoves(startIndex: number, color: Color): Square[] {
+    const moves: Square[] = []
+    const directions = pawnDirectionOffsets[color]
+    const rank = getRank(startIndex)
 
-				targetSquare += offset
-			}
-		}
-		return moves
-	}
+    for (const offset of directions) {
+      const targetIndex = startIndex + offset
+      const targetPiece = this._board[targetIndex]
 
-	private _isValidMove(
-		fromIndex: number,
-		toIndex: number,
-		isKnight?: boolean
-	): boolean {
-		if (toIndex < 0 || toIndex > 63) return false
+      if (targetIndex & 0x88) {
+        continue
+      }
 
-		const fileDiff = Math.abs(getFile(fromIndex) - getFile(toIndex))
-		const rankDiff = Math.abs(getRank(fromIndex) - getRank(toIndex))
+      if (rank === 1 || rank === 6) {
+        if (offset === 32 || offset === -32) {
+          if (targetPiece.type == 'e') {
+            moves.push(indexToSquare(targetIndex))
+          }
+          continue
+        }
+      }
+      if (offset === 16 || offset === -16) {
+        if (targetPiece.type == 'e') {
+          moves.push(indexToSquare(targetIndex))
+        }
+        continue
+      }
 
-		if (
-			(fileDiff === 2 && rankDiff === 1) ||
-			(fileDiff === 1 && rankDiff === 2)
-		) {
-			return true
-		}
+      if (Math.abs(offset) === 17 || Math.abs(offset) === 15) {
+        if (targetPiece.type !== 'e' && targetPiece.color !== color) {
+          moves.push(indexToSquare(targetIndex))
+        }
+      }
+    }
 
-		if (!isKnight) {
-			//МЕГА КОСТЫЛЬ
-			if (fileDiff === rankDiff && fileDiff > 0) return true
-			if (fileDiff === 0 && rankDiff > 0) return true
-			if (rankDiff === 0 && fileDiff > 0) return true
-		}
-		return false
-	}
+    return moves
+  }
 
-	public toFen(): string {
-		let fen = ''
+  private _generateKnightMoves(startIndex: number, color: Color): Square[] {
+    const moves: Square[] = []
+    const directions = pieceDirectionOffsets[KNIGHT]
 
-		for (let rank = 0; rank < 8; rank++) {
-			let emptyCount = 0
-			for (let file = 0; file < 8; file++) {
-				const index = rank * 8 + file
-				const piece = this._board[index]
+    for (const offset of directions) {
+      const targetIndex = startIndex + offset
+      if (targetIndex & 0x88) {
+        continue
+      }
+      const targetPiece = this._board[targetIndex]
 
-				if (!piece) {
-					emptyCount++
-				} else {
-					if (emptyCount > 0) {
-						fen += emptyCount
-						emptyCount = 0
-					}
-					const symbol =
-						piece.color === 'w'
-							? piece.type.toUpperCase()
-							: piece.type.toLowerCase()
-					fen += symbol
-				}
-			}
-			if (emptyCount > 0) {
-				fen += emptyCount
-			}
-			if (rank < 7) {
-				fen += '/'
-			}
-		}
+      if (!targetPiece || targetPiece.color !== color) {
+        moves.push(indexToSquare(targetIndex))
+      }
+    }
 
-		const activeColor = this._activePlayer === 'w' ? 'w' : 'b'
-		/* TODO */
-		let castlingRights = '-'
+    return moves
+  }
 
-		const enPassant = '-'
+  private _generateKingMoves(startIndex: number, color: Color): Square[] {
+    const moves: Square[] = []
+    const directions = pieceDirectionOffsets[KING]
 
-		const halfMoveClock = '0'
+    for (const offset of directions) {
+      const targetIndex = startIndex + offset
 
-		const fullMoveNumber = `${Math.floor(this._moveHistory.length / 2) + 1}`
+      if (targetIndex & 0x88) {
+        continue
+      }
 
-		// Собираем строку FEN
-		return `${fen} ${activeColor} ${castlingRights} ${enPassant} ${halfMoveClock} ${fullMoveNumber}`
-	}
+      const targetPiece = this._board[targetIndex]
 
-	public getBoard(): (Piece | null)[] {
-		return [...this._board]
-	}
+      if (!targetPiece || targetPiece.color !== color) {
+        const originalPiece = this._board[targetIndex]
+        this._board[targetIndex] = this._board[startIndex]
+        this._board[startIndex] = { type: 'e' } as Piece
+        this._kings[color] = targetIndex
 
-	public getActivePlayer(): Color {
-		return this._activePlayer
-	}
+        if (!this.isKingAttacked(color)) {
+          moves.push(indexToSquare(targetIndex))
+        }
 
-	public isGameFinished(): boolean {
-		return this._isGameOver
-	}
+        this._board[startIndex] = this._board[targetIndex]
+        this._board[targetIndex] = originalPiece
+        this._kings[color] = startIndex
+      }
+    }
+
+    return moves
+  }
+
+  private _generateSlidingMoves(startIndex: number, piece: Piece): Square[] {
+    const moves: Square[] = []
+    const directions =
+      piece.type === QUEEN
+        ? pieceDirectionOffsets[QUEEN]
+        : piece.type === BISHOP
+        ? pieceDirectionOffsets[BISHOP]
+        : pieceDirectionOffsets[ROOK]
+
+    for (const offset of directions) {
+      let targetIndex = startIndex + offset
+
+      while (!(targetIndex & 0x88)) {
+        const targetPiece = this._board[targetIndex]
+
+        // если пустое поле 'e' = empty cell
+        if (targetPiece.type === 'e') {
+          moves.push(indexToSquare(targetIndex))
+          targetIndex += offset
+          continue
+        }
+
+        // если вражеская фигура
+        if (targetPiece && targetPiece.color !== piece.color) {
+          moves.push(indexToSquare(targetIndex))
+          break
+        }
+        // если френдли фигура остановка
+        if (targetPiece && targetPiece.color === piece.color) {
+          break
+        }
+      }
+    }
+
+    return moves
+  }
+
+  public toFen(): string {
+    let fen = ''
+    let emptyCount = 0
+    for (let i = Ox88.a8; i < Ox88.h1; i++) {
+      if (i & 0x88) {
+        i += 7 // ТУТ ВОЗМОЖНО ОШИБКА
+        if (emptyCount > 0) {
+          fen += emptyCount
+        }
+        if (getRank(i) < 7) {
+          fen += '/'
+          emptyCount = 0
+        }
+        continue
+      }
+
+      const piece = this._board[i]
+
+      if (piece.type === 'e') {
+        emptyCount++
+      } else {
+        if (emptyCount > 0) {
+          fen += emptyCount
+          emptyCount = 0
+        }
+        const symbol =
+          piece.color === 'w'
+            ? piece.type.toUpperCase()
+            : piece.type.toLowerCase()
+        fen += symbol
+      }
+    }
+
+    const activeColor = this._activePlayer === 'w' ? 'w' : 'b'
+    /* TODO */
+    let castlingRights = '-'
+
+    const enPassant = '-'
+
+    const halfMoveClock = '0'
+
+    const fullMoveNumber = `${Math.floor(this._moveHistory.length / 2) + 1}`
+
+    // Собираем строку FEN
+    return `${fen} ${activeColor} ${castlingRights} ${enPassant} ${halfMoveClock} ${fullMoveNumber}`
+  }
+
+  // public getBoard(): (Piece | null)[] {
+  // 	const board = new Array<Piece | null>().fill(null)
+  // 	for (let i = Ox88.a8; i <= Ox88.h1; i++) {
+  // 		if (this._board[i] !== null) {
+  // 			board.push(this._board[i])
+  // 		} else {
+  // 			board.push(null)
+  // 		}
+  // 		if ((i + 1) & 0x88) {
+  // 			i += 8
+  // 		}
+  // 	}
+
+  // 	return board
+  // }
+
+  public getBoard() {
+    return this._board.map((element, index) => {
+      if (index & 0x88) {
+        return { type: 'o' } as Piece
+      } else if (element === null) {
+        return { type: 'e' } as Piece
+      }
+      return element
+    })
+  }
+  public getActivePlayer(): Color {
+    return this._activePlayer
+  }
+
+  public isGameFinished(): boolean {
+    return this._isGameOver
+  }
 }
 
 export class Move {
-	from: Square
-	to: Square
-	piece: Piece
-	captured?: Piece
-	promotion?: Piece
+  from: Square
+  to: Square
+  piece: Piece
+  captured?: Piece
+  promotion?: Piece
 
-	constructor(internal: InternalMove) {
-		const { fromIndex, toIndex, piece, captured, promotion } = internal
-		const from = indexToSquare(fromIndex)
-		const to = indexToSquare(toIndex)
+  constructor(internal: InternalMove) {
+    const { fromIndex, toIndex, piece, captured, promotion } = internal
+    const from = indexToSquare(fromIndex)
+    const to = indexToSquare(toIndex)
 
-		this.from = from
-		this.to = to
-		this.piece = piece
+    this.from = from
+    this.to = to
+    this.piece = piece
 
-		if (captured) {
-			this.captured = captured
-		}
+    if (captured) {
+      this.captured = captured
+    }
 
-		if (promotion) {
-			this.promotion = promotion
-		}
-	}
-	toString(): string {
-		return `${this.piece.type} (${this.piece.color}) moves from ${this.from} to ${this.to}`
-	}
+    if (promotion) {
+      this.promotion = promotion
+    }
+  }
+  toString(): string {
+    return `${this.piece.type} (${this.piece.color}) moves from ${this.from} to ${this.to}`
+  }
 }
