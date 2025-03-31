@@ -72,7 +72,7 @@ export const Cell: React.FC<CellProps> = ({
 
   const [{ isOver }, drop] = useDrop({
     accept: 'piece',
-    canDrop: (item: { from: Square }) => isLegalMove,
+    canDrop: () => isLegalMove,
     drop: (item: { from: Square }, monitor) => {
       if (!monitor.didDrop()) {
         dispatch(makeMove({ from: item.from, to: square }))
