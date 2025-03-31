@@ -2,7 +2,6 @@
 .idea/
 .vscode/
 .expo/
-.netlify
 
 node_modules/
 build/
