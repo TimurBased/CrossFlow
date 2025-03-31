@@ -1,7 +1,5 @@
 import React from 'react'
 import styled from 'styled-components'
-import { DndProvider } from 'react-dnd'
-import { HTML5Backend } from 'react-dnd-html5-backend'
 import { useAppSelector, useAppDispatch } from '@/hooks/useAppDispatch'
 import { Cell } from './Cell'
 import { Square } from 'chess.js'
@@ -16,6 +14,7 @@ const BoardWrapper = styled.div`
   align-items: center;
   width: 100%;
   margin-top: 10px;
+  user-select: none;
 `
 
 const BoardContainer = styled.div`
@@ -44,25 +43,33 @@ const Board: React.FC = () => {
 
   const handleClick = (square: Square) => {
     const clickedPiece = game.getBoard()[squareToIndex(square)]
+
     if (selectedPiece) {
+      // Если фигура уже выбрана
       if (legalMoves.some((move) => move === square)) {
-        dispatch(makeMove({ from: square, to: selectedPiece }))
+        // Если клик был на легальную клетку, совершаем ход
+        dispatch(makeMove({ from: selectedPiece, to: square }))
+        dispatch(clearSelection()) // Очищаем выбор после хода
       } else {
-        if (clickedPiece && clickedPiece?.color == game.getActivePlayer()) {
+        // Если клик был на другую свою фигуру, обновляем выбор
+        if (clickedPiece && clickedPiece.color === game.getActivePlayer()) {
           dispatch(selectPiece(square))
         } else {
+          // Если клик был на пустую клетку или чужую фигуру, но ход нелегален, очищаем выбор
           dispatch(clearSelection())
         }
       }
     } else {
-      if (clickedPiece && clickedPiece?.color === game.getActivePlayer()) {
+      // Если фигура еще не выбрана
+      if (clickedPiece && clickedPiece.color === game.getActivePlayer()) {
+        // Выбираем фигуру, если клик был по своей фигуре
         dispatch(selectPiece(square))
       }
     }
   }
 
   return (
-    <DndProvider backend={HTML5Backend}>
+    <>
       <h2>Player color move: {game.getActivePlayer()}</h2>
       <BoardWrapper>
         <BoardContainer>
@@ -91,7 +98,7 @@ const Board: React.FC = () => {
             ))}
         </BoardContainer>
       </BoardWrapper>
-    </DndProvider>
+    </>
   )
 }
 

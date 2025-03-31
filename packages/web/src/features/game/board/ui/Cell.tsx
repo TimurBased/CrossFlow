@@ -18,6 +18,7 @@ const IsCheckWrapper = styled.div`
     rgba(255, 0, 0, 0) 70%
   );
 `
+
 const CellContainer = styled.div<{
   isDark: boolean
   isCheck: boolean
@@ -69,21 +70,22 @@ export const Cell: React.FC<CellProps> = ({
   const ref = useRef<HTMLDivElement>(null)
   const dispatch = useAppDispatch()
 
-  const [{ isOver }, drop] = useDrop(() => ({
+  const [{ isOver }, drop] = useDrop({
     accept: 'piece',
-    drop: (item: { from: Square }) => {
-      if (item) {
+    canDrop: (item: { from: Square }) => isLegalMove,
+    drop: (item: { from: Square }, monitor) => {
+      if (!monitor.didDrop()) {
         dispatch(makeMove({ from: item.from, to: square }))
-      } else {
         dispatch(clearSelection())
       }
     },
     collect: (monitor) => ({
       isOver: monitor.isOver(),
     }),
-  }))
+  })
 
   drop(ref)
+
   return (
     <CellContainer
       ref={ref}
