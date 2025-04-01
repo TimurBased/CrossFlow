@@ -7,6 +7,7 @@ import { makeMove, selectPiece, clearSelection } from '../model/slice'
 import NotationFile from './NotationFile'
 import NotationRank from './NotationRank'
 import { indexToSquare, squareToIndex } from '../lib/chess'
+import { DragPreviewLayer } from './DragPreview'
 
 const BoardWrapper = styled.div`
   display: flex;
@@ -98,6 +99,7 @@ const Board: React.FC = () => {
             ))}
         </BoardContainer>
       </BoardWrapper>
+      <DragPreviewLayer />
     </>
   )
 }
