@@ -1,5 +1,4 @@
 import React from 'react'
-import { createPortal } from 'react-dom'
 import styled from 'styled-components'
 import { useAppSelector, useAppDispatch } from '@/hooks/useAppDispatch'
 import { Cell } from './Cell'
@@ -45,7 +44,7 @@ const Board: React.FC = () => {
     legalMoves,
     isCheck,
     gameState,
-    promotionWindow,
+    // promotionWindow,
   } = useAppSelector((state) => state.board)
   const dispatch = useAppDispatch()
 

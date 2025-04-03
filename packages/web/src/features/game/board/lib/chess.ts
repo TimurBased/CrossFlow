@@ -1,5 +1,3 @@
-import { isJSDocUnknownTag } from 'typescript'
-
 export const WHITE = 'w'
 export const BLACK = 'b'
 
