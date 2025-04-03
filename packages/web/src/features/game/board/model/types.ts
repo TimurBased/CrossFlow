@@ -17,6 +17,7 @@ export interface BoardSchema {
   game: Chess
   selectedPiece: Square | null
   legalMoves: Square[]
+  promotionWindow: boolean
   isCheck: boolean
   kingPosition: Square | null
   gameState: 'active' | 'checkmate' | 'stalemate' | 'draw'

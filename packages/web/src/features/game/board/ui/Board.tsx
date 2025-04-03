@@ -1,4 +1,5 @@
 import React from 'react'
+import { createPortal } from 'react-dom'
 import styled from 'styled-components'
 import { useAppSelector, useAppDispatch } from '@/hooks/useAppDispatch'
 import { Cell } from './Cell'
@@ -8,6 +9,7 @@ import NotationFile from './NotationFile'
 import NotationRank from './NotationRank'
 import { indexToSquare, squareToIndex } from '../lib/chess'
 import { DragPreviewLayer } from './DragPreview'
+import { PromotionWindow } from './PromotionWindow'
 
 const BoardWrapper = styled.div`
   display: flex;
@@ -37,9 +39,14 @@ const BoardContainer = styled.div`
 `
 
 const Board: React.FC = () => {
-  const { game, selectedPiece, legalMoves, isCheck } = useAppSelector(
-    (state) => state.board
-  )
+  const {
+    game,
+    selectedPiece,
+    legalMoves,
+    isCheck,
+    gameState,
+    promotionWindow,
+  } = useAppSelector((state) => state.board)
   const dispatch = useAppDispatch()
 
   const handleClick = (square: Square) => {
@@ -71,7 +78,10 @@ const Board: React.FC = () => {
 
   return (
     <>
-      <h2>Player color move: {game.getActivePlayer()}</h2>
+      <h3>Player color move: {game.getActivePlayer()}</h3>
+      <h3>Game state: {gameState}</h3>
+      {/* {promotionWindow && <PromotionWindow />} */}
+      <PromotionWindow />
       <BoardWrapper>
         <BoardContainer>
           <NotationFile />
@@ -91,7 +101,8 @@ const Board: React.FC = () => {
                   ((renderIndex % 8) + Math.floor(renderIndex / 8)) % 2 === 1
                 }
                 isCheck={
-                  isCheck && index === game._kings[game.getActivePlayer()]
+                  isCheck &&
+                  index === game.getKingPosition(game.getActivePlayer())
                 }
                 onClick={() => handleClick(indexToSquare(index))}
                 square={indexToSquare(index)}

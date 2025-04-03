@@ -10,9 +10,11 @@ import {
 
 const initialState: BoardSchema = {
   game: new Chess(DEFAULT_POSITION),
+  //1k6/8/1K6/8/8/8/8/8 w - - 0 1  БАГ С ДВУМЯ КОРОЛЯМИ
   fen: '',
   selectedPiece: null,
   legalMoves: [],
+  promotionWindow: false,
   isCheck: false,
   kingPosition: null,
   gameState: 'active',
@@ -27,9 +29,14 @@ const boardSlice = createSlice({
       state.game.MovePiece(from, to)
       state.fen = state.game.toFen()
       state.isCheck = state.game.isCheck()
+      if (
+        state.game.isPromotion(state.game.getPiece(from), squareToIndex(to))
+      ) {
+        state.promotionWindow = true
+      }
       if (state.isCheck) {
         state.kingPosition = indexToSquare(
-          state.game._kings[state.game.getActivePlayer()]
+          state.game.getKingPosition(state.game.getActivePlayer())
         )
       }
       state.gameState = state.game.isGameFinished() ? 'checkmate' : 'active'

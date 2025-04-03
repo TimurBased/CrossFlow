@@ -1,3 +1,5 @@
+import { isJSDocUnknownTag } from 'typescript'
+
 export const WHITE = 'w'
 export const BLACK = 'b'
 
@@ -8,6 +10,12 @@ export const BISHOP = 'b'
 export const ROOK = 'r'
 export const QUEEN = 'q'
 export const KING = 'k'
+
+export type PROMOTION =
+  | typeof QUEEN
+  | typeof ROOK
+  | typeof BISHOP
+  | typeof KNIGHT
 
 export type Color = typeof WHITE | typeof BLACK
 export type PieceSymbol = 'p' | 'n' | 'b' | 'r' | 'q' | 'k' | 'e' | 'o' // 'e' is empty cell and 'o' its part of 0x88 algorithm
@@ -87,17 +95,19 @@ export function getRank(index: number): number {
 export class Chess {
   private _board: Piece[] = new Array(128).fill({ type: 'e' } as Piece)
   private _activePlayer: Color = WHITE
-  _kings: Record<Color, number> = { w: -1, b: -1 }
+  private _kings: Record<Color, number> = { w: -1, b: -1 }
   private _moveHistory: Move[] = []
   private _isGameOver: boolean = false
-
+  private _castling: Record<
+    Color,
+    Record<typeof KING | typeof QUEEN, boolean>
+  > = { w: { k: false, q: false }, b: { k: false, q: false } }
   constructor(fen: string = DEFAULT_POSITION) {
     this.loadPosition(fen)
-    console.log('making chess instance')
   }
 
   public loadPosition(fen: string): void {
-    const [position, turn] = fen.split(' ')
+    const [position, turn, castlingPart] = fen.split(' ')
 
     let square = 0
     for (let i = 0; i < position.length; i++) {
@@ -116,6 +126,23 @@ export class Chess {
     }
 
     this._activePlayer = turn === WHITE ? WHITE : BLACK
+
+    for (let i = 0; i < 3; i++) {
+      switch (castlingPart[i]) {
+        case 'K':
+          this._castling[WHITE][KING] = true
+          break
+        case 'Q':
+          this._castling[WHITE][QUEEN] = true
+          break
+        case 'k':
+          this._castling[BLACK][KING] = true
+          break
+        case 'q':
+          this._castling[BLACK][QUEEN] = true
+          break
+      }
+    }
 
     // TODO: Добавить обработку рокировки, взятия на проходе и счетчиков ходов
   }
@@ -153,14 +180,62 @@ export class Chess {
     if (piece.color !== this._activePlayer) return null
 
     const possibleMoves = this.generateMoves(piece, from)
+
     if (!possibleMoves.includes(to)) {
       return null
     }
+
+    if (this.isPromotion(piece, toIndex)) {
+      console.log('ITS PROMOTION')
+    }
+    if (
+      piece.type === KING &&
+      (Math.abs(toIndex - fromIndex) === 2 ||
+        Math.abs(toIndex - fromIndex) === 3 ||
+        Math.abs(toIndex - fromIndex) === 4)
+    ) {
+      const isKingSide = toIndex > fromIndex
+      const rookFrom = isKingSide ? fromIndex + 3 : fromIndex - 4
+      const rookTo = isKingSide ? fromIndex + 1 : fromIndex - 1
+      const kingToIndex = isKingSide ? fromIndex + 2 : fromIndex - 2
+      const rook = this._board[rookFrom]
+      if (rook.type !== ROOK || rook.color !== piece.color) return null
+
+      // Перемещение короля
+      this._board[kingToIndex] = piece
+      this._board[fromIndex] = { type: 'e' } as Piece
+
+      // Перемещение ладьи
+      this._board[rookTo] = rook
+      this._board[rookFrom] = { type: 'e' } as Piece
+
+      // Отключаем возможность дальнейшей рокировки
+      this._castling[piece.color][QUEEN] = false
+      this._castling[piece.color][KING] = false
+      this._kings[piece.color] = toIndex
+
+      this._activePlayer = this.swapColor(this._activePlayer)
+      return new Move({ fromIndex, toIndex, piece } as InternalMove)
+    }
+
     this._board[toIndex] = piece
     this._board[fromIndex] = { type: 'e' } as Piece
 
-    //если ход короля то в записи меняем координаты короля с текущим цветом
+    if (piece.type === ROOK) {
+      if (fromIndex === Ox88.a1 || fromIndex === Ox88.a8) {
+        this._castling[piece.color][QUEEN] = false
+      }
+      if (fromIndex === Ox88.h8 || fromIndex === Ox88.h1) {
+        this._castling[piece.color][KING] = false
+      }
+    }
+
+    if (this.isCheckMate()) {
+      this._isGameOver = true
+    }
     if (piece.type === KING) {
+      this._castling[piece.color][QUEEN] = false
+      this._castling[piece.color][KING] = false
       this._kings[piece.color] = toIndex
     }
     const move = new Move({ fromIndex, toIndex, piece } as InternalMove)
@@ -170,6 +245,10 @@ export class Chess {
 
     // TODO: Проверить состояние игры
     return move
+  }
+
+  getPiece(square: Square): Piece {
+    return this._board[Ox88[square]]
   }
 
   swapColor(color: Color): Color {
@@ -188,14 +267,17 @@ export class Chess {
       }
 
       // if empty square or wrong color
-      if (this._board[i].type === 'e' || this._board[i].color === color) {
+      if (this._board[i].type === EMPTY || this._board[i].color === color) {
         continue
       }
 
       const piece = this._board[i]
-      if (piece.type !== 'k') {
-        const possibleMoves = this.generateMoves(piece, indexToSquare(i))
-        console.log(piece?.type)
+      if (piece.type !== KING) {
+        const possibleMoves = this._privateGenerateMoves(
+          piece,
+          indexToSquare(i)
+        )
+
         if (possibleMoves.includes(indexToSquare(squareIndex))) {
           if (verbose) {
             attackers.push(indexToSquare(i))
@@ -218,7 +300,47 @@ export class Chess {
   public isCheck(): boolean {
     return this.isKingAttacked(this._activePlayer)
   }
-  public generateMoves(piece: Piece, startSquare: Square): Square[] {
+
+  public isCheckMate(): boolean {
+    return (
+      this.isKingAttacked(this.swapColor(this._activePlayer)) &&
+      this._generateAllPossibleMoves(this.swapColor(this._activePlayer))
+        .length === 0
+    )
+  }
+
+  public isStaleMate(): boolean {
+    return (
+      !this.isKingAttacked(this.swapColor(this._activePlayer)) &&
+      this._generateAllPossibleMoves(this.swapColor(this._activePlayer))
+        .length === 0
+    )
+  }
+
+  public getKingPosition(color: Color): number {
+    return this._kings[color]
+  }
+  private _generateAllPossibleMoves(color: Color): Square[] {
+    const moves: Square[] = []
+    for (let i = Ox88.a8; i <= Ox88.h1; i++) {
+      // did we run off the end of the board
+      if (i & 0x88) {
+        i += 7
+        continue
+      }
+      const piece = this._board[i]
+      const startPieceSquare = indexToSquare(i)
+      // if empty square or wrong color
+      if (piece.type === EMPTY || this._board[i].color !== color) {
+        continue
+      }
+
+      moves.push(...this.generateMoves(piece, startPieceSquare))
+    }
+
+    return moves
+  }
+  private _privateGenerateMoves(piece: Piece, startSquare: Square): Square[] {
     const sq = Ox88[startSquare]
     const moves: Square[] = []
 
@@ -237,7 +359,30 @@ export class Chess {
         break
     }
 
-    // console.log(moves)
+    return moves
+  }
+  public generateMoves(piece: Piece, startSquare: Square): Square[] {
+    const sq = Ox88[startSquare]
+    const moves: Square[] = []
+
+    if (this.isKingAttacked(piece.color)) {
+      return this._generateSafeMoves(piece, startSquare)
+    }
+    switch (piece.type) {
+      case PAWN:
+        moves.push(...this._generatePawnMoves(sq, piece.color))
+        break
+      case KNIGHT:
+        moves.push(...this._generateKnightMoves(sq, piece.color))
+        break
+      case KING:
+        moves.push(...this._generateKingMoves(sq, piece.color))
+        break
+      default:
+        moves.push(...this._generateSlidingMoves(sq, piece))
+        break
+    }
+
     return moves
   }
 
@@ -253,24 +398,27 @@ export class Chess {
       if (targetIndex & 0x88) {
         continue
       }
+      // PROMOTION
+      if (rank === 8 || rank === 0) {
+      }
 
       if (rank === 1 || rank === 6) {
         if (offset === 32 || offset === -32) {
-          if (targetPiece.type == 'e') {
+          const middleSquare = this._board[startIndex + offset / 2]
+          if (targetPiece.type == EMPTY && middleSquare.type === EMPTY) {
             moves.push(indexToSquare(targetIndex))
           }
-          continue
         }
       }
       if (offset === 16 || offset === -16) {
-        if (targetPiece.type == 'e') {
+        if (targetPiece.type == EMPTY) {
           moves.push(indexToSquare(targetIndex))
         }
         continue
       }
 
       if (Math.abs(offset) === 17 || Math.abs(offset) === 15) {
-        if (targetPiece.type !== 'e' && targetPiece.color !== color) {
+        if (targetPiece.type !== EMPTY && targetPiece.color !== color) {
           moves.push(indexToSquare(targetIndex))
         }
       }
@@ -327,6 +475,13 @@ export class Chess {
       }
     }
 
+    if (this._castling[color][KING] && this._canCastleKingSide(color)) {
+      moves.push(indexToSquare(startIndex + 2), indexToSquare(startIndex + 3))
+    }
+    if (this._castling[color][QUEEN] && this._canCastleQueenSide(color)) {
+      moves.push(indexToSquare(startIndex - 2), indexToSquare(startIndex - 4))
+    }
+
     return moves
   }
 
@@ -346,7 +501,7 @@ export class Chess {
         const targetPiece = this._board[targetIndex]
 
         // если пустое поле 'e' = empty cell
-        if (targetPiece.type === 'e') {
+        if (targetPiece.type === EMPTY) {
           moves.push(indexToSquare(targetIndex))
           targetIndex += offset
           continue
@@ -367,10 +522,125 @@ export class Chess {
     return moves
   }
 
+  private _generateSafeMoves(piece: Piece, startSquare: Square): Square[] {
+    const moves = this._privateGenerateMoves(piece, startSquare)
+
+    if (piece.type === KING) {
+      return moves
+    }
+    const fromIndex = squareToIndex(startSquare)
+    const prevFromPiece = this._board[fromIndex]
+
+    return moves.filter((move) => {
+      const toIndex = squareToIndex(move)
+      const prevToPiece = this._board[toIndex]
+
+      this._board[toIndex] = piece
+      this._board[fromIndex] = { type: 'e' } as Piece
+
+      const isSafe = !this.isKingAttacked(piece.color)
+
+      this._board[fromIndex] = prevFromPiece
+      this._board[toIndex] = prevToPiece
+
+      return isSafe
+    })
+  }
+
+  private _canCastleKingSide(color: Color): boolean {
+    const kingIndex = this._kings[color]
+    const rookIndex = kingIndex + 3
+
+    if (
+      this._board[rookIndex].type !== ROOK ||
+      this._board[rookIndex].color !== color
+    ) {
+      return false
+    }
+
+    // Проверяем, что клетки между королем и ладьей свободны
+    for (let i = 1; i <= 2; i++) {
+      if (this._board[kingIndex + i].type !== 'e') {
+        return false
+      }
+    }
+
+    // Проверяем, что король не проходит через шах
+    return (
+      !this.isKingAttacked(color) &&
+      !this.isAttacked(color, kingIndex + 1) &&
+      !this.isAttacked(color, kingIndex + 2)
+    )
+  }
+
+  private _canCastleQueenSide(color: Color): boolean {
+    const kingIndex = this._kings[color]
+    const rookIndex = kingIndex - 4
+
+    if (
+      this._board[rookIndex].type !== ROOK ||
+      this._board[rookIndex].color !== color
+    ) {
+      return false
+    }
+
+    // Проверяем, что клетки между королем и ладьей свободны
+    for (let i = 1; i <= 3; i++) {
+      if (this._board[kingIndex - i].type !== 'e') {
+        return false
+      }
+    }
+
+    return (
+      !this.isKingAttacked(color) &&
+      !this.isAttacked(color, kingIndex - 1) &&
+      !this.isAttacked(color, kingIndex - 2)
+    )
+  }
+
+  public isPromotion(piece: Piece, toIndex: number): boolean {
+    const rank = getRank(toIndex)
+    if (piece.type === PAWN && (rank === 0 || rank === 8)) {
+      return true
+    }
+    return false
+  }
+
+  ascii(): string {
+    let s = '   +------------------------+\n'
+    for (let i = Ox88.a8; i <= Ox88.h1; i++) {
+      // display the rank
+      if (getFile(i) === 0) {
+        s += ' ' + '87654321'[getRank(i)] + ' |'
+      }
+
+      if (this._board[i]) {
+        const piece = this._board[i].type
+        const color = this._board[i].color
+        let symbol = color === WHITE ? piece.toUpperCase() : piece.toLowerCase()
+        if (symbol === 'e') {
+          symbol = '.'
+        }
+        s += ' ' + symbol + ' '
+      } else {
+        s += ' . '
+      }
+
+      if ((i + 1) & 0x88) {
+        s += '|\n'
+        i += 8
+      }
+    }
+    s += '   +------------------------+\n'
+    s += '     a  b  c  d  e  f  g  h'
+
+    return s
+  }
+
   public toFen(): string {
     let fen = ''
     let emptyCount = 0
-    for (let i = Ox88.a8; i < Ox88.h1; i++) {
+    for (let i = Ox88.a8; i <= Ox88.h1; i++) {
       if (i & 0x88) {
         i += 7 // ТУТ ВОЗМОЖНО ОШИБКА
         if (emptyCount > 0) {
@@ -401,9 +671,14 @@ export class Chess {
     }
 
     const activeColor = this._activePlayer === 'w' ? 'w' : 'b'
-    /* TODO */
-    let castlingRights = '-'
 
+    let castlingRights = ''
+    if (this._castling[WHITE][KING]) castlingRights += 'K'
+    if (this._castling[WHITE][QUEEN]) castlingRights += 'Q'
+    if (this._castling[BLACK][KING]) castlingRights += 'k'
+    if (this._castling[BLACK][QUEEN]) castlingRights += 'q'
+    if (castlingRights === '') castlingRights = '-'
+    /* TODO */
     const enPassant = '-'
 
     const halfMoveClock = '0'

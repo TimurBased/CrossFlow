@@ -20,6 +20,7 @@ const IsCheckWrapper = styled.div`
 `
 
 const CellContainer = styled.div<{
+  piece: Piece | null
   isDark: boolean
   isCheck: boolean
   isLegalMove?: boolean
@@ -32,8 +33,7 @@ const CellContainer = styled.div<{
   justify-content: center;
   position: relative;
   cursor: pointer;
-  background-color: ${({ isDark, isOver }) =>
-    isOver ? 'rgba(0, 153, 0, 0.58)' : isDark ? '#b58863' : '#f0d9b5'};
+  background-color: ${({ isDark }) => (isDark ? '#b58863' : '#f0d9b5')};
 
   &::after {
     content: '';
@@ -44,10 +44,20 @@ const CellContainer = styled.div<{
     transform: translate(-50%, -50%);
     width: 25%;
     height: 25%;
-    border-radius: 50%;
-    background-color: rgba(74, 145, 74, 0.73);
+    border-radius: 100%;
+    background: ${({ piece }) => (!piece ? 'rgba(20, 85, 30, 0.5)' : 'none')};
     z-index: 2;
   }
+
+  ${({ isLegalMove, piece, isDark, isOver }) =>
+    isLegalMove &&
+    piece &&
+    `
+      background: radial-gradient(transparent 1%, transparent 79%, rgba(20, 85, 30, 0.5) 80%);
+      background-color: ${
+        isOver ? 'rgba(20, 85, 30, 0.5)' : isDark ? '#b58863' : '#f0d9b5'
+      };
+    `}
 `
 
 interface CellProps {
@@ -90,6 +100,7 @@ export const Cell: React.FC<CellProps> = ({
 
   return (
     <CellContainer
+      piece={piece}
       ref={ref}
       isDark={isDark}
       isLegalMove={isLegalMove}
