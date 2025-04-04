@@ -5,7 +5,6 @@ import { useAppDispatch } from '@/hooks/useAppDispatch'
 import { Piece, Square } from '../lib/chess'
 import { clearSelection, makeMove } from '../model/slice'
 import { Figure } from './Figure'
-import { PromotionWindow } from './PromotionWindow'
 
 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
 
@@ -73,7 +72,7 @@ const CellContainer = styled.div<{
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 1.5em; /* радиус на 1.5 длины клетки */
+      width: 1.5em;
       height: 1.5em;
       border-radius: 50%;
       background: ${({ piece }) => (!piece ? 'rgba(20, 85, 30, 0.5)' : 'none')};

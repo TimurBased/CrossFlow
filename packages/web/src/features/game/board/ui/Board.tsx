@@ -8,7 +8,6 @@ import NotationFile from './NotationFile'
 import NotationRank from './NotationRank'
 import { indexToSquare, squareToIndex } from '../lib/chess'
 import { DragPreviewLayer } from './DragPreview'
-import { PromotionWindow } from './PromotionWindow'
 
 const BoardWrapper = styled.div`
   display: flex;

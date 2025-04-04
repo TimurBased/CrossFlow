@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react'
+import React, { useRef, useEffect } from 'react'
 import styled from 'styled-components'
 import { Piece, Square } from '../lib/chess'
 import { pieceToComponentMapBase64 } from '@/features/game/board/model/types'
