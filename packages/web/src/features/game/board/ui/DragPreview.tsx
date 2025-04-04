@@ -1,46 +1,49 @@
 import { useDragLayer } from 'react-dnd'
 import styled from 'styled-components'
 import { pieceToComponentMapBase64 } from '@/features/game/board/model/types'
-import { Piece } from '../lib/chess'
 
-// Устанавливаем размер превью фигуры (должен совпадать с реальной фигурой на доске)
-const FIGURE_SIZE = 160 // Подстрой под твои размеры клеток
-
-const DragPreview = styled.div<{ imageUrl: string; x: number; y: number }>`
+const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+const FIGURE_SIZE = isMobile ? 90 : 90
+const DragPreview = styled.div<{
+  x: number
+  y: number
+  imageUrl: string
+  size: number
+}>`
   position: fixed;
   pointer-events: none;
-  left: ${({ x }) => `${x - FIGURE_SIZE / 2}px`}; /* Центрируем */
-  top: ${({ y }) => `${y - FIGURE_SIZE / 2}px`}; /* Центрируем */
-  width: ${FIGURE_SIZE}px;
-  height: ${FIGURE_SIZE}px;
+  width: ${({ size }) => `${size}`}px;
+  height: ${({ size }) => `${size}`}px;
+  left: ${({ x }) => x}px;
+  top: ${({ y }) => y}px;
   background: ${({ imageUrl }) => `url(${imageUrl})`} no-repeat center;
   background-size: contain;
-  z-index: 100;
-  opacity: 0.9;
-  filter: drop-shadow(2px 2px 6px rgba(0, 0, 0, 0.4));
-  transition: transform 0.05s ease-out;
+  z-index: 1000;
+  filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.4));
 `
 
 export const DragPreviewLayer = () => {
-  const { item, isDragging, currentOffset } = useDragLayer((monitor) => ({
+  const { item, isDragging, clientOffset } = useDragLayer((monitor) => ({
     item: monitor.getItem(),
     isDragging: monitor.isDragging(),
-    currentOffset: monitor.getSourceClientOffset(),
+    clientOffset: monitor.getClientOffset(),
   }))
 
-  if (!isDragging || !currentOffset || !item) return null
+  if (!isDragging || !clientOffset || !item?.piece) {
+    return null
+  }
 
-  const { piece }: { piece: Piece } = item
   const imageUrl =
     pieceToComponentMapBase64[
-      piece.color === 'b' ? piece.type : piece.type.toUpperCase()
+      item.piece.color === 'b' ? item.piece.type : item.piece.type.toUpperCase()
     ]
 
   return (
     <DragPreview
+      size={FIGURE_SIZE}
       imageUrl={imageUrl}
-      x={currentOffset.x + 50}
-      y={currentOffset.y}
+      x={clientOffset.x - (isMobile ? 45 : 45)}
+      y={clientOffset.y - (isMobile ? 45 + 45 : 45)}
     />
   )
 }

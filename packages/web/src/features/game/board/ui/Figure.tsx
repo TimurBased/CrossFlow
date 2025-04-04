@@ -1,20 +1,17 @@
-import React, { useRef } from 'react'
+import React, { useRef, useState, useEffect } from 'react'
 import styled from 'styled-components'
-import { useDrag } from 'react-dnd'
 import { Piece, Square } from '../lib/chess'
 import { pieceToComponentMapBase64 } from '@/features/game/board/model/types'
-import { getEmptyImage } from 'react-dnd-html5-backend'
+import { useDrag } from 'react-dnd'
 
-// Стилизованный компонент для фигур
-const FigureStyled = styled.div<{ isDragging: boolean; imageUrl: string }>`
+const FigureStyled = styled.div<{ imageUrl: string; isDragging: boolean }>`
   width: 100%;
   height: 100%;
   cursor: grab;
   touch-action: none;
   background: ${({ imageUrl }) => `url(${imageUrl})`} no-repeat center;
   background-size: contain;
-  opacity: ${({ isDragging }) => (isDragging ? 0.6 : 1)};
-  z-index: ${({ isDragging }) => (isDragging ? 10 : 1)};
+  z-index: 10;
 `
 
 interface FigureProps {
@@ -23,32 +20,23 @@ interface FigureProps {
 }
 
 export const Figure: React.FC<FigureProps> = ({ piece, square }) => {
+  const imageUrl =
+    pieceToComponentMapBase64[
+      piece.color === 'b' ? piece.type : piece.type.toUpperCase()
+    ]
   const ref = useRef<HTMLDivElement>(null)
-
-  const [{ isDragging }, drag, dragPreview] = useDrag({
+  const [{ isDragging }, drag, preview] = useDrag({
     type: 'PIECE',
     item: { piece, fromSquare: square },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
   })
-
-  // Выключаем превью по умолчанию
-  React.useEffect(() => {
-    dragPreview(getEmptyImage(), { captureDraggingState: true })
-  }, [])
-
   drag(ref)
 
-  return (
-    <FigureStyled
-      ref={ref}
-      imageUrl={
-        pieceToComponentMapBase64[
-          piece.color === 'b' ? piece.type : piece.type.toUpperCase()
-        ]
-      }
-      isDragging={isDragging}
-    />
-  )
+  useEffect(() => {
+    preview(document.createElement('div'))
+  }, [preview])
+
+  return <FigureStyled ref={ref} imageUrl={imageUrl} isDragging={isDragging} />
 }

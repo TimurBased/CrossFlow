@@ -79,8 +79,7 @@ const Board: React.FC = () => {
     <>
       <h3>Player color move: {game.getActivePlayer()}</h3>
       <h3>Game state: {gameState}</h3>
-      {/* {promotionWindow && <PromotionWindow />} */}
-      <PromotionWindow />
+
       <BoardWrapper>
         <BoardContainer>
           <NotationFile />

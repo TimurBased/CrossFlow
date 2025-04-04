@@ -14,18 +14,18 @@ const ModalOverlay = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 15px;
+  gap: 10px;
   border-radius: 10px;
-  min-width: auto;
-  min-height: auto;
+  max-width: auto;
+  max-height: auto;
 `
 
 const CloseButton = styled.button`
   background: none;
   display: block;
   width: 10vh;
-  height: 3vh;
-
+  height: 4vh;
+  border-radius: 0px 0px 10px 10px;
   border: none;
   font-size: 20px;
   cursor: pointer;
@@ -33,7 +33,6 @@ const CloseButton = styled.button`
   transition: 0.2s;
 
   &:hover {
-    color: red;
     background-color: rgb(185, 185, 185);
   }
 `

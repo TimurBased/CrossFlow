@@ -5,6 +5,9 @@ import { useAppDispatch } from '@/hooks/useAppDispatch'
 import { Piece, Square } from '../lib/chess'
 import { clearSelection, makeMove } from '../model/slice'
 import { Figure } from './Figure'
+import { PromotionWindow } from './PromotionWindow'
+
+const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
 
 const IsCheckWrapper = styled.div`
   width: 100%;
@@ -25,6 +28,7 @@ const CellContainer = styled.div<{
   isCheck: boolean
   isLegalMove?: boolean
   isOver?: boolean
+  isMobile: boolean
 }>`
   width: auto;
   height: auto;
@@ -33,7 +37,9 @@ const CellContainer = styled.div<{
   justify-content: center;
   position: relative;
   cursor: pointer;
-  background-color: ${({ isDark }) => (isDark ? '#b58863' : '#f0d9b5')};
+
+  background-color: ${({ isDark, isOver }) =>
+    isOver ? 'rgba(20, 85, 30, 0.5)' : isDark ? '#b58863' : '#f0d9b5'};
 
   &::after {
     content: '';
@@ -58,6 +64,22 @@ const CellContainer = styled.div<{
         isOver ? 'rgba(20, 85, 30, 0.5)' : isDark ? '#b58863' : '#f0d9b5'
       };
     `}
+
+  @media (max-width: 767px) {
+    &::after {
+      content: '';
+      display: ${({ isLegalMove }) => (isLegalMove ? 'flex' : 'none')};
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 1.5em; /* радиус на 1.5 длины клетки */
+      height: 1.5em;
+      border-radius: 50%;
+      background: ${({ piece }) => (!piece ? 'rgba(20, 85, 30, 0.5)' : 'none')};
+      z-index: 2;
+    }
+  }
 `
 
 interface CellProps {
@@ -99,17 +121,20 @@ export const Cell: React.FC<CellProps> = ({
   drop(ref)
 
   return (
-    <CellContainer
-      piece={piece}
-      ref={ref}
-      isDark={isDark}
-      isLegalMove={isLegalMove}
-      isCheck={isCheck}
-      isOver={isOver}
-      onClick={onClick}
-    >
-      {piece && <Figure piece={piece} square={square} />}
-      {isCheck && <IsCheckWrapper />}
-    </CellContainer>
+    <>
+      <CellContainer
+        isMobile={isMobile}
+        piece={piece}
+        ref={ref}
+        isDark={isDark}
+        isLegalMove={isLegalMove}
+        isCheck={isCheck}
+        isOver={isOver}
+        onClick={onClick}
+      >
+        {piece && <Figure piece={piece} square={square} />}
+        {isCheck && <IsCheckWrapper />}
+      </CellContainer>
+    </>
   )
 }
