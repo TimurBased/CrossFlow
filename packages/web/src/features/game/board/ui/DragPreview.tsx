@@ -3,7 +3,7 @@ import styled from 'styled-components'
 import { pieceToComponentMapBase64 } from '@/features/game/board/model/types'
 
 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-const FIGURE_SIZE = isMobile ? 90 : 90
+const FIGURE_SIZE = isMobile ? 100 : 100
 const DragPreview = styled.div<{
   x: number
   y: number
@@ -42,8 +42,8 @@ export const DragPreviewLayer = () => {
     <DragPreview
       size={FIGURE_SIZE}
       imageUrl={imageUrl}
-      x={clientOffset.x - (isMobile ? 45 : 45)}
-      y={clientOffset.y - (isMobile ? 45 + 45 : 45)}
+      x={clientOffset.x - (isMobile ? 50 : 50)}
+      y={clientOffset.y - (isMobile ? 50 + 50 : 50)}
     />
   )
 }

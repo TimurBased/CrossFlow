@@ -4,7 +4,7 @@ import UserOutlined from '@ant-design/icons'
 import { Button, Checkbox, Form, Flex } from 'antd'
 import { FormikErrors, FormikProps, withFormik, Field } from 'formik'
 import { validUserSchema } from '@crossflow/common'
-import { InputField } from '../../../shared/components/ui/InputField'
+import { InputField } from '@/shared/components/ui/InputField'
 import { Link } from 'react-router-dom'
 
 interface FormValues {

@@ -12,6 +12,7 @@ const FigureStyled = styled.div<{ imageUrl: string; isDragging: boolean }>`
   background: ${({ imageUrl }) => `url(${imageUrl})`} no-repeat center;
   background-size: contain;
   z-index: 10;
+  opacity: ${({ isDragging }) => (isDragging ? '0.5' : '1')};
 `
 
 interface FigureProps {

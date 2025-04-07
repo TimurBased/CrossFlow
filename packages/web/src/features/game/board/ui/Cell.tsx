@@ -6,8 +6,6 @@ import { Piece, Square } from '../lib/chess'
 import { clearSelection, makeMove } from '../model/slice'
 import { Figure } from './Figure'
 
-const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-
 const IsCheckWrapper = styled.div`
   width: 100%;
   height: 100%;
@@ -27,7 +25,6 @@ const CellContainer = styled.div<{
   isCheck: boolean
   isLegalMove?: boolean
   isOver?: boolean
-  isMobile: boolean
 }>`
   width: auto;
   height: auto;
@@ -63,22 +60,6 @@ const CellContainer = styled.div<{
         isOver ? 'rgba(20, 85, 30, 0.5)' : isDark ? '#b58863' : '#f0d9b5'
       };
     `}
-
-  @media (max-width: 767px) {
-    &::after {
-      content: '';
-      display: ${({ isLegalMove }) => (isLegalMove ? 'flex' : 'none')};
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 1.5em;
-      height: 1.5em;
-      border-radius: 50%;
-      background: ${({ piece }) => (!piece ? 'rgba(20, 85, 30, 0.5)' : 'none')};
-      z-index: 2;
-    }
-  }
 `
 
 interface CellProps {
@@ -122,7 +103,6 @@ export const Cell: React.FC<CellProps> = ({
   return (
     <>
       <CellContainer
-        isMobile={isMobile}
         piece={piece}
         ref={ref}
         isDark={isDark}
