@@ -47,9 +47,11 @@ const Board: React.FC = () => {
   } = useAppSelector((state) => state.board)
   const dispatch = useAppDispatch()
 
-  const handleClick = (square: Square) => {
-    const clickedPiece = game.getBoard()[squareToIndex(square)]
+  const board = game.getBoard()
+  const activePlayer = game.getActivePlayer()
 
+  const handleClick = (square: Square) => {
+    const clickedPiece = board[squareToIndex(square)]
     if (selectedPiece) {
       // Если фигура уже выбрана
       if (legalMoves.some((move) => move === square)) {
@@ -58,7 +60,7 @@ const Board: React.FC = () => {
         dispatch(clearSelection()) // Очищаем выбор после хода
       } else {
         // Если клик был на другую свою фигуру, обновляем выбор
-        if (clickedPiece && clickedPiece.color === game.getActivePlayer()) {
+        if (clickedPiece && clickedPiece.color === activePlayer) {
           dispatch(selectPiece(square))
         } else {
           // Если клик был на пустую клетку или чужую фигуру, но ход нелегален, очищаем выбор
@@ -67,7 +69,7 @@ const Board: React.FC = () => {
       }
     } else {
       // Если фигура еще не выбрана
-      if (clickedPiece && clickedPiece.color === game.getActivePlayer()) {
+      if (clickedPiece && clickedPiece.color === activePlayer) {
         // Выбираем фигуру, если клик был по своей фигуре
         dispatch(selectPiece(square))
       }
@@ -76,35 +78,34 @@ const Board: React.FC = () => {
 
   return (
     <>
-      <h3>Player color move: {game.getActivePlayer()}</h3>
+      <h3>Player color move: {activePlayer}</h3>
       <h3>Game state: {gameState}</h3>
 
       <BoardWrapper>
         <BoardContainer>
           <NotationFile />
           <NotationRank />
-          {game
-            .getBoard()
+          {board
             .map((cell, index) => ({ cell, index }))
-            .filter(({ cell }) => cell.type !== 'o')
-            .map(({ cell, index }, renderIndex) => (
-              <Cell
-                key={index + 1}
-                piece={cell.type === 'e' ? null : cell}
-                isLegalMove={legalMoves.some(
-                  (move) => move === indexToSquare(index)
-                )}
-                isDark={
-                  ((renderIndex % 8) + Math.floor(renderIndex / 8)) % 2 === 1
-                }
-                isCheck={
-                  isCheck &&
-                  index === game.getKingPosition(game.getActivePlayer())
-                }
-                onClick={() => handleClick(indexToSquare(index))}
-                square={indexToSquare(index)}
-              />
-            ))}
+            .filter(({ index }) => (index & 0x88) === 0)
+            .map(({ cell, index }, renderIndex) => {
+              const square = indexToSquare(index)
+              return (
+                <Cell
+                  key={index}
+                  piece={cell ? cell : null}
+                  isLegalMove={legalMoves.some((move) => move === square)}
+                  isDark={
+                    ((renderIndex % 8) + Math.floor(renderIndex / 8)) % 2 === 1
+                  }
+                  isCheck={
+                    isCheck && index === game.getKingPosition(activePlayer)
+                  }
+                  onClick={() => handleClick(square)}
+                  square={square}
+                />
+              )
+            })}
         </BoardContainer>
       </BoardWrapper>
       <DragPreviewLayer />

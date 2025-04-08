@@ -16,7 +16,7 @@ export type PROMOTION =
   | typeof KNIGHT
 
 export type Color = typeof WHITE | typeof BLACK
-export type PieceSymbol = 'p' | 'n' | 'b' | 'r' | 'q' | 'k' | 'e' | 'o' // 'e' is empty cell and 'o' its part of 0x88 algorithm
+export type PieceSymbol = 'p' | 'n' | 'b' | 'r' | 'q' | 'k'
 
 // prettier-ignore
 export type Square =
@@ -41,6 +41,46 @@ export const Ox88: Record<Square, number> = {
   a2:  96, b2:  97, c2:  98, d2:  99, e2: 100, f2: 101, g2: 102, h2: 103,
   a1: 112, b1: 113, c1: 114, d1: 115, e1: 116, f1: 117, g1: 118, h1: 119
 }
+
+// prettier-ignore
+const ATTACKS = [
+  20, 0, 0, 0, 0, 0, 0, 24,  0, 0, 0, 0, 0, 0,20, 0,
+   0,20, 0, 0, 0, 0, 0, 24,  0, 0, 0, 0, 0,20, 0, 0,
+   0, 0,20, 0, 0, 0, 0, 24,  0, 0, 0, 0,20, 0, 0, 0,
+   0, 0, 0,20, 0, 0, 0, 24,  0, 0, 0,20, 0, 0, 0, 0,
+   0, 0, 0, 0,20, 0, 0, 24,  0, 0,20, 0, 0, 0, 0, 0,
+   0, 0, 0, 0, 0,20, 2, 24,  2,20, 0, 0, 0, 0, 0, 0,
+   0, 0, 0, 0, 0, 2,53, 56, 53, 2, 0, 0, 0, 0, 0, 0,
+  24,24,24,24,24,24,56,  0, 56,24,24,24,24,24,24, 0,
+   0, 0, 0, 0, 0, 2,53, 56, 53, 2, 0, 0, 0, 0, 0, 0,
+   0, 0, 0, 0, 0,20, 2, 24,  2,20, 0, 0, 0, 0, 0, 0,
+   0, 0, 0, 0,20, 0, 0, 24,  0, 0,20, 0, 0, 0, 0, 0,
+   0, 0, 0,20, 0, 0, 0, 24,  0, 0, 0,20, 0, 0, 0, 0,
+   0, 0,20, 0, 0, 0, 0, 24,  0, 0, 0, 0,20, 0, 0, 0,
+   0,20, 0, 0, 0, 0, 0, 24,  0, 0, 0, 0, 0,20, 0, 0,
+  20, 0, 0, 0, 0, 0, 0, 24,  0, 0, 0, 0, 0, 0,20
+];
+
+// prettier-ignore
+const RAYS = [
+   17,  0,  0,  0,  0,  0,  0, 16,  0,  0,  0,  0,  0,  0, 15, 0,
+    0, 17,  0,  0,  0,  0,  0, 16,  0,  0,  0,  0,  0, 15,  0, 0,
+    0,  0, 17,  0,  0,  0,  0, 16,  0,  0,  0,  0, 15,  0,  0, 0,
+    0,  0,  0, 17,  0,  0,  0, 16,  0,  0,  0, 15,  0,  0,  0, 0,
+    0,  0,  0,  0, 17,  0,  0, 16,  0,  0, 15,  0,  0,  0,  0, 0,
+    0,  0,  0,  0,  0, 17,  0, 16,  0, 15,  0,  0,  0,  0,  0, 0,
+    0,  0,  0,  0,  0,  0, 17, 16, 15,  0,  0,  0,  0,  0,  0, 0,
+    1,  1,  1,  1,  1,  1,  1,  0, -1, -1,  -1,-1, -1, -1, -1, 0,
+    0,  0,  0,  0,  0,  0,-15,-16,-17,  0,  0,  0,  0,  0,  0, 0,
+    0,  0,  0,  0,  0,-15,  0,-16,  0,-17,  0,  0,  0,  0,  0, 0,
+    0,  0,  0,  0,-15,  0,  0,-16,  0,  0,-17,  0,  0,  0,  0, 0,
+    0,  0,  0,-15,  0,  0,  0,-16,  0,  0,  0,-17,  0,  0,  0, 0,
+    0,  0,-15,  0,  0,  0,  0,-16,  0,  0,  0,  0,-17,  0,  0, 0,
+    0,-15,  0,  0,  0,  0,  0,-16,  0,  0,  0,  0,  0,-17,  0, 0,
+  -15,  0,  0,  0,  0,  0,  0,-16,  0,  0,  0,  0,  0,  0,-17
+];
+
+const PIECE_MASKS = { p: 0x1, n: 0x2, b: 0x4, r: 0x8, q: 0x10, k: 0x20 }
 
 export const DEFAULT_POSITION =
   'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
@@ -91,7 +131,7 @@ export function getRank(index: number): number {
 }
 
 export class Chess {
-  private _board: Piece[] = new Array(128).fill({ type: 'e' } as Piece)
+  private _board: Piece[] = new Array(128)
   private _activePlayer: Color = WHITE
   private _kings: Record<Color, number> = { w: -1, b: -1 }
   private _moveHistory: Move[] = []
@@ -102,6 +142,7 @@ export class Chess {
   > = { w: { k: false, q: false }, b: { k: false, q: false } }
   constructor(fen: string = DEFAULT_POSITION) {
     this.loadPosition(fen)
+    console.log(this._board)
   }
 
   public loadPosition(fen: string): void {
@@ -118,7 +159,7 @@ export class Chess {
       } else {
         const color: Color = piece === piece.toLowerCase() ? BLACK : WHITE
         const type: PieceSymbol = piece.toLowerCase() as PieceSymbol
-        this._putPiece({ type: type, color }, indexToSquare(square))
+        this._putPiece({ type: type, color } as Piece, indexToSquare(square))
         square++
       }
     }
@@ -145,10 +186,7 @@ export class Chess {
     // TODO: Добавить обработку рокировки, взятия на проходе и счетчиков ходов
   }
 
-  private _putPiece(
-    { type, color }: { type: PieceSymbol; color: Color },
-    square: Square
-  ): boolean {
+  private _putPiece({ type, color }: Piece, square: Square): boolean {
     // check for piece
     if ('pnbrqkPNBRQK'.indexOf(type.toLowerCase()) === -1) {
       return false
@@ -161,7 +199,7 @@ export class Chess {
 
     const sq = Ox88[square]
 
-    this._board[sq] = { type: type as PieceSymbol, color: color as Color }
+    this._board[sq] = { type: type, color: color as Color }
 
     if (type === KING) {
       this._kings[color] = sq
@@ -201,11 +239,11 @@ export class Chess {
 
       // Перемещение короля
       this._board[kingToIndex] = piece
-      this._board[fromIndex] = { type: 'e' } as Piece
+      delete this._board[fromIndex]
 
       // Перемещение ладьи
       this._board[rookTo] = rook
-      this._board[rookFrom] = { type: 'e' } as Piece
+      delete this._board[rookFrom]
 
       // Отключаем возможность дальнейшей рокировки
       this._castling[piece.color][QUEEN] = false
@@ -217,7 +255,7 @@ export class Chess {
     }
 
     this._board[toIndex] = piece
-    this._board[fromIndex] = { type: 'e' } as Piece
+    delete this._board[fromIndex]
 
     if (piece.type === ROOK) {
       if (fromIndex === Ox88.a1 || fromIndex === Ox88.a8) {
@@ -265,7 +303,7 @@ export class Chess {
       }
 
       // if empty square or wrong color
-      if (this._board[i].type === EMPTY || this._board[i].color === color) {
+      if (this._board[i] === undefined || this._board[i].color === color) {
         continue
       }
 
@@ -329,7 +367,7 @@ export class Chess {
       const piece = this._board[i]
       const startPieceSquare = indexToSquare(i)
       // if empty square or wrong color
-      if (piece.type === EMPTY || this._board[i].color !== color) {
+      if (piece == null || this._board[i].color !== color) {
         continue
       }
 
@@ -392,7 +430,6 @@ export class Chess {
     for (const offset of directions) {
       const targetIndex = startIndex + offset
       const targetPiece = this._board[targetIndex]
-
       if (targetIndex & 0x88) {
         continue
       }
@@ -403,20 +440,20 @@ export class Chess {
       if (rank === 1 || rank === 6) {
         if (offset === 32 || offset === -32) {
           const middleSquare = this._board[startIndex + offset / 2]
-          if (targetPiece.type == EMPTY && middleSquare.type === EMPTY) {
+          if (targetPiece == null && middleSquare === undefined) {
             moves.push(indexToSquare(targetIndex))
           }
         }
       }
       if (offset === 16 || offset === -16) {
-        if (targetPiece.type == EMPTY) {
+        if (targetPiece == null) {
           moves.push(indexToSquare(targetIndex))
         }
         continue
       }
 
       if (Math.abs(offset) === 17 || Math.abs(offset) === 15) {
-        if (targetPiece.type !== EMPTY && targetPiece.color !== color) {
+        if (targetPiece && targetPiece.color !== color) {
           moves.push(indexToSquare(targetIndex))
         }
       }
@@ -460,7 +497,8 @@ export class Chess {
       if (!targetPiece || targetPiece.color !== color) {
         const originalPiece = this._board[targetIndex]
         this._board[targetIndex] = this._board[startIndex]
-        this._board[startIndex] = { type: 'e' } as Piece
+        delete this._board[startIndex]
+        // this._board[startIndex] = { type: 'e' } as Piece
         this._kings[color] = targetIndex
 
         if (!this.isKingAttacked(color)) {
@@ -499,7 +537,7 @@ export class Chess {
         const targetPiece = this._board[targetIndex]
 
         // если пустое поле 'e' = empty cell
-        if (targetPiece.type === EMPTY) {
+        if (targetPiece == null) {
           moves.push(indexToSquare(targetIndex))
           targetIndex += offset
           continue
@@ -534,7 +572,7 @@ export class Chess {
       const prevToPiece = this._board[toIndex]
 
       this._board[toIndex] = piece
-      this._board[fromIndex] = { type: 'e' } as Piece
+      delete this._board[fromIndex]
 
       const isSafe = !this.isKingAttacked(piece.color)
 
@@ -558,7 +596,7 @@ export class Chess {
 
     // Проверяем, что клетки между королем и ладьей свободны
     for (let i = 1; i <= 2; i++) {
-      if (this._board[kingIndex + i].type !== 'e') {
+      if (this._board[kingIndex + i] != null) {
         return false
       }
     }
@@ -584,11 +622,12 @@ export class Chess {
 
     // Проверяем, что клетки между королем и ладьей свободны
     for (let i = 1; i <= 3; i++) {
-      if (this._board[kingIndex - i].type !== 'e') {
+      if (this._board[kingIndex - i] != null) {
         return false
       }
     }
 
+    //Проверяем не атакованы ли клетки между рокировками
     return (
       !this.isKingAttacked(color) &&
       !this.isAttacked(color, kingIndex - 1) &&
@@ -653,7 +692,7 @@ export class Chess {
 
       const piece = this._board[i]
 
-      if (piece.type === 'e') {
+      if (piece == null) {
         emptyCount++
       } else {
         if (emptyCount > 0) {
@@ -703,15 +742,19 @@ export class Chess {
   // 	return board
   // }
 
+  // public getBoard() {
+  //   return this._board.map((element, index) => {
+  //     if (index & 0x88) {
+  //       return undefined
+  //     } else if (!element) {
+  //       return undefined
+  //     }
+  //     return element
+  //   })
+  // }
+
   public getBoard() {
-    return this._board.map((element, index) => {
-      if (index & 0x88) {
-        return { type: 'o' } as Piece
-      } else if (element === null) {
-        return { type: 'e' } as Piece
-      }
-      return element
-    })
+    return [...this._board]
   }
   public getActivePlayer(): Color {
     return this._activePlayer
