@@ -11,7 +11,7 @@ import BlackBishop from '@/shared/assets/icons/BB.png'
 import BlackRook from '@/shared/assets/icons/BR.png'
 import BlackQueen from '@/shared/assets/icons/BQ.png'
 import BlackKing from '@/shared/assets/icons/BK.png'
-import { Chess, Square } from '../lib/chess'
+import { Chess, GAME_STATE, Square } from '../lib/chess'
 
 export interface BoardSchema {
   game: Chess
@@ -20,7 +20,7 @@ export interface BoardSchema {
   promotionWindow: boolean
   isCheck: boolean
   kingPosition: Square | null
-  gameState: 'active' | 'checkmate' | 'stalemate' | 'draw'
+  gameState: GAME_STATE
   fen: string
 }
 

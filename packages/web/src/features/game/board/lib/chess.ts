@@ -9,6 +9,8 @@ export const ROOK = 'r'
 export const QUEEN = 'q'
 export const KING = 'k'
 
+export type GAME_STATE = 'active' | 'checkmate' | 'stalemate' | 'draw'
+
 export type PROMOTION =
   | typeof QUEEN
   | typeof ROOK
@@ -142,7 +144,6 @@ export class Chess {
   > = { w: { k: false, q: false }, b: { k: false, q: false } }
   constructor(fen: string = DEFAULT_POSITION) {
     this.loadPosition(fen)
-    console.log(this._board)
   }
 
   public loadPosition(fen: string): void {
@@ -265,9 +266,8 @@ export class Chess {
         this._castling[piece.color][KING] = false
       }
     }
-
-    if (this.isCheckMate()) {
-      this._isGameOver = true
+    if (this.getGameState() !== 'active') {
+      return null
     }
     if (piece.type === KING) {
       this._castling[piece.color][QUEEN] = false
@@ -278,8 +278,6 @@ export class Chess {
     this._moveHistory.push(move)
 
     this._activePlayer = this.swapColor(this._activePlayer)
-
-    // TODO: Проверить состояние игры
     return move
   }
 
@@ -290,11 +288,7 @@ export class Chess {
   swapColor(color: Color): Color {
     return color === WHITE ? BLACK : WHITE
   }
-  isAttacked(color: Color, squareIndex: number): boolean
-  isAttacked(color: Color, squareIndex: number, verbose: false): boolean
-  isAttacked(color: Color, squareIndex: number, verbose: true): Square[]
-  isAttacked(color: Color, squareIndex: number, verbose?: boolean) {
-    const attackers: Square[] = []
+  isAttacked(color: Color, square: number): boolean {
     for (let i = Ox88.a8; i <= Ox88.h1; i++) {
       // did we run off the end of the board
       if (i & 0x88) {
@@ -303,41 +297,66 @@ export class Chess {
       }
 
       // if empty square or wrong color
-      if (this._board[i] === undefined || this._board[i].color === color) {
+      if (this._board[i] === undefined || this._board[i].color !== color) {
         continue
       }
 
       const piece = this._board[i]
-      if (piece.type !== KING) {
-        const possibleMoves = this._privateGenerateMoves(
-          piece,
-          indexToSquare(i)
-        )
+      const difference = i - square
 
-        if (possibleMoves.includes(indexToSquare(squareIndex))) {
-          if (verbose) {
-            attackers.push(indexToSquare(i))
-            continue
-          } else return true
+      // skip - to/from square are the same
+      if (difference === 0) {
+        continue
+      }
+
+      const index = difference + 119
+
+      if (ATTACKS[index] & PIECE_MASKS[piece.type]) {
+        if (piece.type === PAWN) {
+          if (
+            (difference > 0 && piece.color === WHITE) ||
+            (difference <= 0 && piece.color === BLACK)
+          ) {
+            return true
+          }
+          continue
+        }
+
+        // if the piece is a knight or a king
+        if (piece.type === 'n' || piece.type === 'k') {
+          return true
+        }
+
+        const offset = RAYS[index]
+        let j = i + offset
+
+        let blocked = false
+        while (j !== square) {
+          if (this._board[j] != null) {
+            blocked = true
+            break
+          }
+          j += offset
+        }
+
+        if (!blocked) {
+          return true
         }
       }
     }
 
-    if (verbose) {
-      return attackers
-    } else {
-      return false
-    }
+    return false
   }
 
   public isKingAttacked(color: Color): boolean {
-    return this.isAttacked(color, this._kings[color])
+    const square = this._kings[color]
+    return this.isAttacked(this.swapColor(color), square)
   }
   public isCheck(): boolean {
     return this.isKingAttacked(this._activePlayer)
   }
 
-  public isCheckMate(): boolean {
+  private _isCheckMate(): boolean {
     return (
       this.isKingAttacked(this.swapColor(this._activePlayer)) &&
       this._generateAllPossibleMoves(this.swapColor(this._activePlayer))
@@ -345,12 +364,81 @@ export class Chess {
     )
   }
 
-  public isStaleMate(): boolean {
+  private _isStaleMate(): boolean {
     return (
       !this.isKingAttacked(this.swapColor(this._activePlayer)) &&
       this._generateAllPossibleMoves(this.swapColor(this._activePlayer))
         .length === 0
     )
+  }
+  private _isDraw(): boolean {
+    //ПРОВЕРИТЬ ПРАВИЛО 50 ПОЛУХОДОВ
+    //ПРОВЕРИТЬ ПРАВИЛО 3 ОДИНАКОВЫХ ПОЗИЦИЙ
+    return this.isInsufficientMaterial()
+  }
+
+  private isInsufficientMaterial(): boolean {
+    /*
+     * k.b. vs k.b. (of opposite colors) with mate in 1:
+     * 8/8/8/8/1b6/8/B1k5/K7 b - - 0 1
+     *
+     * k.b. vs k.n. with mate in 1:
+     * 8/8/8/8/1n6/8/B7/K1k5 b - - 2 1
+     */
+    const pieces: Record<PieceSymbol, number> = {
+      b: 0,
+      n: 0,
+      r: 0,
+      q: 0,
+      k: 0,
+      p: 0,
+    }
+    const bishops = []
+    let numPieces = 0
+    let squareColor = 0
+
+    for (let i = Ox88.a8; i <= Ox88.h1; i++) {
+      squareColor = (squareColor + 1) % 2
+      if (i & 0x88) {
+        i += 7
+        continue
+      }
+
+      const piece = this._board[i]
+      if (piece) {
+        pieces[piece.type] = piece.type in pieces ? pieces[piece.type] + 1 : 1
+        if (piece.type === BISHOP) {
+          bishops.push(squareColor)
+        }
+        numPieces++
+      }
+    }
+
+    // k vs. k
+    if (numPieces === 2) {
+      return true
+    } else if (
+      // k vs. kn .... or .... k vs. kb
+      numPieces === 3 &&
+      (pieces[BISHOP] === 1 || pieces[KNIGHT] === 1)
+    ) {
+      return true
+    } else if (numPieces === pieces[BISHOP] + 2) {
+      // kb vs. kb where any number of bishops are all on the same color
+      let sum = 0
+      const len = bishops.length
+      for (let i = 0; i < len; i++) {
+        sum += bishops[i]
+      }
+      if (sum === 0 || sum === len) {
+        return true
+      }
+    }
+
+    return false
+  }
+  public isGameOver(): boolean {
+    return this._isGameOver
   }
 
   public getKingPosition(color: Color): number {
@@ -376,34 +464,11 @@ export class Chess {
 
     return moves
   }
-  private _privateGenerateMoves(piece: Piece, startSquare: Square): Square[] {
-    const sq = Ox88[startSquare]
-    const moves: Square[] = []
 
-    switch (piece.type) {
-      case 'p':
-        moves.push(...this._generatePawnMoves(sq, piece.color))
-        break
-      case 'n':
-        moves.push(...this._generateKnightMoves(sq, piece.color))
-        break
-      case 'k':
-        moves.push(...this._generateKingMoves(sq, piece.color))
-        break
-      default:
-        moves.push(...this._generateSlidingMoves(sq, piece))
-        break
-    }
-
-    return moves
-  }
   public generateMoves(piece: Piece, startSquare: Square): Square[] {
     const sq = Ox88[startSquare]
     const moves: Square[] = []
 
-    if (this.isKingAttacked(piece.color)) {
-      return this._generateSafeMoves(piece, startSquare)
-    }
     switch (piece.type) {
       case PAWN:
         moves.push(...this._generatePawnMoves(sq, piece.color))
@@ -413,13 +478,34 @@ export class Chess {
         break
       case KING:
         moves.push(...this._generateKingMoves(sq, piece.color))
-        break
+        return moves
+
       default:
         moves.push(...this._generateSlidingMoves(sq, piece))
         break
     }
 
-    return moves
+    const fromIndex = squareToIndex(startSquare)
+
+    const pseudoLegal = moves.filter((moveSquare) => {
+      const toIndex = squareToIndex(moveSquare)
+      const capturedPiece = this._board[toIndex] // сохраняем съеденную фигуру, если есть
+
+      // Выполняем временный ход
+      delete this._board[fromIndex]
+      this._board[toIndex] = piece
+
+      const isSafe = this.isKingAttacked(piece.color)
+
+      // Откатываем
+      delete this._board[toIndex]
+      this._board[fromIndex] = piece
+      if (capturedPiece) this._board[toIndex] = capturedPiece
+
+      return !isSafe
+    })
+
+    return pseudoLegal
   }
 
   private _generatePawnMoves(startIndex: number, color: Color): Square[] {
@@ -496,9 +582,10 @@ export class Chess {
 
       if (!targetPiece || targetPiece.color !== color) {
         const originalPiece = this._board[targetIndex]
+
         this._board[targetIndex] = this._board[startIndex]
         delete this._board[startIndex]
-        // this._board[startIndex] = { type: 'e' } as Piece
+
         this._kings[color] = targetIndex
 
         if (!this.isKingAttacked(color)) {
@@ -536,7 +623,7 @@ export class Chess {
       while (!(targetIndex & 0x88)) {
         const targetPiece = this._board[targetIndex]
 
-        // если пустое поле 'e' = empty cell
+        // если пустое поле
         if (targetPiece == null) {
           moves.push(indexToSquare(targetIndex))
           targetIndex += offset
@@ -556,31 +643,6 @@ export class Chess {
     }
 
     return moves
-  }
-
-  private _generateSafeMoves(piece: Piece, startSquare: Square): Square[] {
-    const moves = this._privateGenerateMoves(piece, startSquare)
-
-    if (piece.type === KING) {
-      return moves
-    }
-    const fromIndex = squareToIndex(startSquare)
-    const prevFromPiece = this._board[fromIndex]
-
-    return moves.filter((move) => {
-      const toIndex = squareToIndex(move)
-      const prevToPiece = this._board[toIndex]
-
-      this._board[toIndex] = piece
-      delete this._board[fromIndex]
-
-      const isSafe = !this.isKingAttacked(piece.color)
-
-      this._board[fromIndex] = prevFromPiece
-      this._board[toIndex] = prevToPiece
-
-      return isSafe
-    })
   }
 
   private _canCastleKingSide(color: Color): boolean {
@@ -726,33 +788,6 @@ export class Chess {
     return `${fen} ${activeColor} ${castlingRights} ${enPassant} ${halfMoveClock} ${fullMoveNumber}`
   }
 
-  // public getBoard(): (Piece | null)[] {
-  // 	const board = new Array<Piece | null>().fill(null)
-  // 	for (let i = Ox88.a8; i <= Ox88.h1; i++) {
-  // 		if (this._board[i] !== null) {
-  // 			board.push(this._board[i])
-  // 		} else {
-  // 			board.push(null)
-  // 		}
-  // 		if ((i + 1) & 0x88) {
-  // 			i += 8
-  // 		}
-  // 	}
-
-  // 	return board
-  // }
-
-  // public getBoard() {
-  //   return this._board.map((element, index) => {
-  //     if (index & 0x88) {
-  //       return undefined
-  //     } else if (!element) {
-  //       return undefined
-  //     }
-  //     return element
-  //   })
-  // }
-
   public getBoard() {
     return [...this._board]
   }
@@ -760,8 +795,19 @@ export class Chess {
     return this._activePlayer
   }
 
-  public isGameFinished(): boolean {
-    return this._isGameOver
+  public getGameState(): GAME_STATE {
+    if (this._isCheckMate()) {
+      this._isGameOver = true
+      return 'checkmate'
+    }
+    if (this._isStaleMate()) {
+      this._isGameOver = true
+      return 'stalemate'
+    }
+    if (this._isDraw()) {
+    }
+
+    return 'active'
   }
 }
 
