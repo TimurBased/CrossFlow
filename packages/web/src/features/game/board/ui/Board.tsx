@@ -6,7 +6,7 @@ import { Square } from 'chess.js'
 import { makeMove, selectPiece, clearSelection } from '../model/slice'
 import NotationFile from './NotationFile'
 import NotationRank from './NotationRank'
-import { indexToSquare, squareToIndex } from '../lib/chess'
+import { indexToSquare, squareToIndex } from '../lib/utils'
 import { DragPreviewLayer } from './DragPreview'
 
 const BoardWrapper = styled.div`

@@ -2,7 +2,7 @@ import React, { useRef } from 'react'
 import styled from 'styled-components'
 import { useDrop } from 'react-dnd'
 import { useAppDispatch } from '@/hooks/useAppDispatch'
-import { Piece, Square } from '../lib/chess'
+import { Piece, Square } from '../lib/types'
 import { clearSelection, makeMove } from '../model/slice'
 import { Figure } from './Figure'
 

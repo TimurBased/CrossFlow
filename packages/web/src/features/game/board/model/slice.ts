@@ -1,13 +1,8 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 import { BoardSchema } from './types'
-import {
-  Chess,
-  DEFAULT_POSITION,
-  indexToSquare,
-  PROMOTION,
-  Square,
-  squareToIndex,
-} from '../lib/chess'
+import { Chess } from '../lib/chess'
+import { Square } from '../lib/types'
+import { indexToSquare, squareToIndex } from '../lib/utils'
 
 const initialState: BoardSchema = {
   game: new Chess('k7/2pPp1P1/8/8/8/8/Pp2K2p/8 w - - 0 1'),
@@ -29,11 +24,12 @@ const boardSlice = createSlice({
       state.game.MovePiece(from, to)
       state.fen = state.game.toFen()
       state.isCheck = state.game.isCheck()
-      if (
-        state.game.isPromotion(state.game.getPiece(from), squareToIndex(to))
-      ) {
-        state.promotionWindow = true
-      }
+
+      // if (
+      //   state.game.isPromotion(state.game.getPiece(from), squareToIndex(to))
+      // ) {
+      //   state.promotionWindow = true
+      // }
       if (state.isCheck) {
         state.kingPosition = indexToSquare(
           state.game.getKingPosition(state.game.getActivePlayer())
@@ -52,6 +48,7 @@ const boardSlice = createSlice({
         state.selectedPiece = null
         return
       }
+
       state.legalMoves = state.game.generateMoves(piece, square)
       state.selectedPiece = square
     },
@@ -59,7 +56,8 @@ const boardSlice = createSlice({
       state.selectedPiece = null
       state.legalMoves = []
     },
-    promotionMove(state, action: PayloadAction<PROMOTION>) {},
+    // TODO
+    // promotionMove(state, action: PayloadAction<PROMOTION>) {},
   },
 })
 

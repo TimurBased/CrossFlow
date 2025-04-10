@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react'
 import styled from 'styled-components'
-import { Piece, Square } from '../lib/chess'
+import { Piece, Square } from '../lib/types'
 import { pieceToComponentMapBase64 } from '@/features/game/board/model/types'
 import { useDrag } from 'react-dnd'
 
