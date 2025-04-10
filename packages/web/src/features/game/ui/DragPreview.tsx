@@ -1,6 +1,6 @@
 import { useDragLayer } from 'react-dnd'
 import styled from 'styled-components'
-import { pieceToComponentMapBase64 } from '@/features/game/board/model/types'
+import { pieceToComponentMapBase64 } from '@/features/game/model/types'
 
 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
 const FIGURE_SIZE = isMobile ? 100 : 100

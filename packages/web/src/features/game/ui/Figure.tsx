@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react'
 import styled from 'styled-components'
 import { Piece, Square } from '../lib/types'
-import { pieceToComponentMapBase64 } from '@/features/game/board/model/types'
+import { pieceToComponentMapBase64 } from '@/features/game/model/types'
 import { useDrag } from 'react-dnd'
 
 const FigureStyled = styled.div<{ imageUrl: string; isDragging: boolean }>`

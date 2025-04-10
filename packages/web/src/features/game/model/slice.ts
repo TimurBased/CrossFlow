@@ -1,11 +1,11 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 import { BoardSchema } from './types'
 import { Chess } from '../lib/chess'
-import { Square } from '../lib/types'
+import { DEFAULT_POSITION, Square } from '../lib/types'
 import { indexToSquare, squareToIndex } from '../lib/utils'
 
 const initialState: BoardSchema = {
-  game: new Chess('k7/2pPp1P1/8/8/8/8/Pp2K2p/8 w - - 0 1'),
+  game: new Chess(DEFAULT_POSITION),
   fen: '',
   selectedPiece: null,
   legalMoves: [],

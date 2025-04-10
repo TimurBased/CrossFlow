@@ -11,7 +11,8 @@ import BlackBishop from '@/shared/assets/icons/BB.png'
 import BlackRook from '@/shared/assets/icons/BR.png'
 import BlackQueen from '@/shared/assets/icons/BQ.png'
 import BlackKing from '@/shared/assets/icons/BK.png'
-import { Chess, GAME_STATE, Square } from '../lib/chess'
+import { GAME_STATE, Square } from '../lib/types'
+import { Chess } from '../lib/chess'
 
 export interface BoardSchema {
   game: Chess

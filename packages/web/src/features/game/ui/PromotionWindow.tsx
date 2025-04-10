@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import styled from 'styled-components'
-import { pieceToComponentMapBase64 } from '@/features/game/board/model/types'
+import { pieceToComponentMapBase64 } from '@/features/game/model/types'
 
 const ModalOverlay = styled.div`
   position: fixed;

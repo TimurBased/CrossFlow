@@ -5,10 +5,11 @@ import {
   BLACK,
   Color,
   DEFAULT_POSITION,
-  GAME_STATE,
   InternalMove,
   KING,
   KNIGHT,
+  GAME_STATE,
+  Square,
   Ox88,
   PAWN,
   pawnDirectionOffsets,
@@ -19,7 +20,6 @@ import {
   QUEEN,
   RAYS,
   ROOK,
-  Square,
   WHITE,
 } from './types'
 import { getRank, indexToSquare, squareToIndex, swapColor } from './utils'

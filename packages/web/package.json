@@ -30,7 +30,6 @@
   "devDependencies": {
     "@eslint/js": "^9.17.0",
     "@types/axios": "^0.14.4",
-    "@types/chess.js": "^0.13.7",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
     "@types/react-router-dom": "^5.3.3",
